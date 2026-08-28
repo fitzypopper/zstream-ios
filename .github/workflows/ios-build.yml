@@ -48,7 +48,7 @@ jobs:
         working-directory: app/ios
         run: |
           xcodebuild \
-            -workspace ZStream.xcworkspace \
+            -workspace pstream.xcworkspace \
             -scheme ZStream \
             -configuration Release \
             -sdk iphoneos \
