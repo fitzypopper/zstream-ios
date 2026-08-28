@@ -1,27 +1,16 @@
 /**
- * Default configuration values for the pstream app.
- *
- * SECURITY NOTICE:
- * This app NEVER communicates with the backend (port 3000) in any form.
- * All network traffic MUST go through the proxy (port 3003) ONLY.
- * Direct backend access is forbidden and will be rejected at runtime.
+ * Default configuration values for the ZStream app.
  */
 
 /**
- * Base API URL - the ONLY entry point for all network traffic.
- * This points to the PROXY server, NOT the backend.
- *
- * INVARIANT: Port 3003 is the proxy. Port 3000 is the backend.
- * The app MUST ONLY communicate with the proxy.
+ * Base API URL - the ZStream backend.
  */
-// For production: use 'http://129.159.231.53:3003'
-export const BASE_API_URL = 'http://129.159.231.53:3003';
+export const BASE_API_URL = 'https://backend.zstream.mov';
 
 /**
- * Forbidden port - direct backend access is blocked at runtime.
- * Any request attempting to reach this port will be rejected.
+ * TMDB API key for metadata lookups.
  */
-export const FORBIDDEN_BACKEND_PORT = 3000;
+export const TMDB_API_KEY = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJkMGI2OTRhM2IwYjUwMDgxYmIwNzU4MjYyMjAxMzFmNCIsIm5iZiI6MTcyNTQ0OTI3My45OTk5OTksInN1YiI6IjY2ZDFiY2IwMDNhMjM4NzY5MGMwMjVjMCIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.jGqSqoUGQdXMCN0CGnFC9NFHV3D7AlO2lWY00sYfxEk';
 
 /**
  * API request timeout in milliseconds
@@ -36,5 +25,5 @@ export const API_RETRY_COUNT = 1;
 /**
  * Client identifier sent with all API requests
  */
-export const CLIENT_IDENTIFIER = 'pstream-app';
+export const CLIENT_IDENTIFIER = 'zstream-ios';
 

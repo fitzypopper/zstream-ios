@@ -1,6 +1,6 @@
 /**
- * SearchScreen - Search functionality for content discovery.
- * Uses react-query with debounced input, grid layout, and reusable PosterCard.
+ * SearchScreen - ZStream search with Apple-native iOS styling.
+ * Uses native search bar and grid layout.
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -12,10 +12,8 @@ import {
   Keyboard,
   ActivityIndicator,
   useWindowDimensions,
-  StyleProp,
-  ViewStyle,
 } from 'react-native';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { search } from '../api/pstream';
@@ -32,8 +30,7 @@ const DEBOUNCE_MS = 350;
 
 const SearchScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
-  const queryClient = useQueryClient();
-  const { colors, spacing, radii, typography } = useTheme();
+  const { colors, spacing, radii } = useTheme();
   const { width } = useWindowDimensions();
   const viewportWidth = width || 390;
 
@@ -44,16 +41,6 @@ const SearchScreen: React.FC = () => {
     const handle = setTimeout(() => setDebouncedQuery(searchQuery.trim()), DEBOUNCE_MS);
     return () => clearTimeout(handle);
   }, [searchQuery]);
-
-  useEffect(() => {
-    if (debouncedQuery.length > 0) {
-      queryClient.prefetchQuery({
-        queryKey: ['search', debouncedQuery],
-        queryFn: () => search(debouncedQuery),
-        staleTime: 60 * 1000,
-      });
-    }
-  }, [debouncedQuery, queryClient]);
 
   const {
     data,
@@ -93,69 +80,48 @@ const SearchScreen: React.FC = () => {
     setDebouncedQuery('');
   }, []);
 
-  const handleRefetch = useCallback(() => {
-    refetch();
-  }, [refetch]);
-
-  const columnWrapperStyle = useMemo<StyleProp<ViewStyle>>(
-    () => [
-      styles.columnWrapper,
-      columns > 1 ? styles.columnMulti : styles.columnSingle,
-      { marginBottom: spacing.md },
-    ],
-    [columns, spacing.md],
-  );
-
-  const searchInputContainerStyle = useMemo(
-    () => [
-      styles.searchInputContainer,
-      {
-        backgroundColor: colors.SURFACE,
-        borderRadius: radii.md,
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.sm,
-        borderColor: colors.CARD,
-      },
-    ],
-    [colors.CARD, colors.SURFACE, radii.md, spacing.md, spacing.sm],
-  );
-
-  const gridCardStyle = useMemo(() => styles.gridCard, []);
-  const footerStyle = useMemo(
-    () => [styles.footer, { paddingVertical: spacing.md }],
-    [spacing.md],
-  );
-
   return (
     <ThemedView variant="background" style={styles.container}>
       <FlatList
         data={results}
         keyExtractor={item => item.id}
         numColumns={columns}
-        columnWrapperStyle={columnWrapperStyle}
+        columnWrapperStyle={[
+          styles.columnWrapper,
+          columns > 1 ? styles.columnMulti : styles.columnSingle,
+          { marginBottom: spacing.md },
+        ]}
         keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"
         onScrollBeginDrag={Keyboard.dismiss}
         contentContainerStyle={{
           paddingHorizontal: spacing.md,
-          paddingBottom: spacing.xl,
+          paddingBottom: 100,
         }}
         ListHeaderComponent={
           <View style={[styles.header, { paddingVertical: spacing.md }]}>
-            <ThemedText variant="h1" style={{ marginBottom: spacing.md }}>
+            <ThemedText variant="largeTitle" style={{ marginBottom: spacing.md }}>
               Search
             </ThemedText>
             <View
-              style={searchInputContainerStyle}>
+              style={[
+                styles.searchInputContainer,
+                {
+                  backgroundColor: colors.SURFACE,
+                  borderRadius: radii.md,
+                },
+              ]}>
+              <ThemedText variant="body" color="muted" style={styles.searchIcon}>
+                🔍
+              </ThemedText>
               <TextInput
                 style={[
                   styles.searchInput,
                   {
                     color: colors.TEXT_PRIMARY,
-                    fontSize: typography.fontSize.body,
                   },
                 ]}
-                placeholder="Search movies, shows, genres..."
+                placeholder="Movies, shows, genres..."
                 placeholderTextColor={colors.MUTED}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
@@ -166,18 +132,12 @@ const SearchScreen: React.FC = () => {
               />
               {searchQuery.length > 0 && (
                 <TouchableOpacity onPress={clearQuery} accessibilityRole="button" accessibilityLabel="Clear search">
-                  <ThemedText variant="small" color="accent">Clear</ThemedText>
+                  <View style={[styles.clearButton, { backgroundColor: colors.FILL }]}>
+                    <ThemedText variant="caption1" style={styles.clearButtonText}>✕</ThemedText>
+                  </View>
                 </TouchableOpacity>
               )}
             </View>
-            {isFetching && results.length > 0 ? (
-              <View style={[styles.inlineStatus, { marginTop: spacing.sm }]}>
-                <ActivityIndicator color={colors.PRIMARY} size="small" />
-                <ThemedText variant="small" color="secondary" style={{ marginLeft: spacing.xs }}>
-                  Updating results...
-                </ThemedText>
-              </View>
-            ) : null}
           </View>
         }
         renderItem={({ item }) => (
@@ -187,14 +147,16 @@ const SearchScreen: React.FC = () => {
             onPress={handlePress}
             showProgress={typeof item.progress === 'number'}
             progress={item.progress ?? 0}
-            containerStyle={gridCardStyle}
+            containerStyle={{ marginRight: spacing.sm }}
           />
         )}
         ListEmptyComponent={
           <View style={[styles.emptyState, { paddingVertical: spacing.xl }]}>
             {showIdle && (
               <>
-                <ThemedText variant="h2" style={{ marginBottom: spacing.sm }}>Find something to watch</ThemedText>
+                <ThemedText variant="title3" style={{ marginBottom: spacing.sm }}>
+                  Find something to watch
+                </ThemedText>
                 <ThemedText variant="body" color="secondary">
                   Start typing to search the catalogue.
                 </ThemedText>
@@ -203,38 +165,32 @@ const SearchScreen: React.FC = () => {
             {showLoading && <ActivityIndicator color={colors.PRIMARY} size="large" />}
             {showEmpty && (
               <>
-                <ThemedText variant="h2" style={{ marginBottom: spacing.sm }}>No matches</ThemedText>
-                <ThemedText variant="body" color="secondary">Try a different title or keyword.</ThemedText>
+                <ThemedText variant="title3" style={{ marginBottom: spacing.sm }}>
+                  No matches
+                </ThemedText>
+                <ThemedText variant="body" color="secondary">
+                  Try a different title or keyword.
+                </ThemedText>
               </>
             )}
             {showError && (
               <>
-                <ThemedText variant="h2" style={{ marginBottom: spacing.sm }}>Unable to search</ThemedText>
+                <ThemedText variant="title3" style={{ marginBottom: spacing.sm }}>
+                  Unable to search
+                </ThemedText>
                 <ThemedText variant="body" color="secondary" style={{ marginBottom: spacing.md }}>
                   Check your connection or try again.
                 </ThemedText>
                 <TouchableOpacity
-                  style={{
-                    backgroundColor: colors.CARD,
-                    paddingHorizontal: spacing.lg,
-                    paddingVertical: spacing.sm,
-                    borderRadius: radii.sm,
-                  }}
-                  onPress={handleRefetch}
+                  style={[{ backgroundColor: colors.SURFACE, paddingHorizontal: 20, paddingVertical: 10, borderRadius: radii.sm }]}
+                  onPress={() => refetch()}
                   accessibilityRole="button"
                   accessibilityLabel="Retry search">
-                  <ThemedText variant="body" color="accent">Retry</ThemedText>
+                  <ThemedText variant="headline" color="accent">Retry</ThemedText>
                 </TouchableOpacity>
               </>
             )}
           </View>
-        }
-        ListFooterComponent={
-          isFetching && results.length > 0 ? (
-            <View style={footerStyle}>
-              <ActivityIndicator color={colors.PRIMARY} />
-            </View>
-          ) : null
         }
       />
     </ThemedView>
@@ -249,20 +205,32 @@ const styles = StyleSheet.create({
   searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    borderWidth: 1,
+    paddingHorizontal: 12,
+    height: 44,
+  },
+  searchIcon: {
+    marginRight: 8,
   },
   searchInput: {
     flex: 1,
-    paddingVertical: 4,
+    fontSize: 17,
+    paddingVertical: 0,
+  },
+  clearButton: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  clearButtonText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '600',
   },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  inlineStatus: {
-    flexDirection: 'row',
-    alignItems: 'center',
   },
   columnWrapper: {},
   columnMulti: {
@@ -270,12 +238,6 @@ const styles = StyleSheet.create({
   },
   columnSingle: {
     justifyContent: 'flex-start',
-  },
-  gridCard: {
-    marginRight: 0,
-  },
-  footer: {
-    alignItems: 'center',
   },
 });
 

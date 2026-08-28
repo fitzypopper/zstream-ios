@@ -1,6 +1,5 @@
 /**
- * PlayerScreen - Media player screen.
- * Displays video player UI with controls.
+ * PlayerScreen - ZStream video player with Apple-native iOS styling.
  */
 import React, { useState, useRef, useEffect } from 'react';
 import {
@@ -17,6 +16,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQuery } from '@tanstack/react-query';
 import Video, { VideoRef, OnLoadData, OnProgressData, TextTrackType, ISO639_1 } from 'react-native-video';
 import { fetchSources } from '../api/pstream';
+import { updateProgress, updateWatchHistory } from '../api/auth';
+import { getUserId } from '../config/env';
 import { Source } from '../api/types';
 import { RootStackParamList } from '../navigation/types';
 import { useTheme } from '../theme/ThemeProvider';
@@ -26,26 +27,6 @@ import { ThemedText } from '../components/ThemedText';
 type PlayerScreenRouteProp = RouteProp<RootStackParamList, 'Player'>;
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Player'>;
 
-/**
- * PlayerScreen component.
- *
- * This screen is responsible for video playback for a single title. It:
- * - Reads navigation route parameters to determine which title to play.
- * - Fetches available streaming sources for the given title.
- * - Automatically selects a preferred HLS source and quality.
- * - Provides basic playback controls (play/pause, progress tracking).
- * - Handles loading and error states when fetching or playing sources.
- * - Supports subtitle / text tracks when provided by the selected source.
- * - Allows manual quality/source selection via a modal.
- *
- * Route params (from {@link RootStackParamList} `'Player'`):
- * - `tmdbId`: Numeric TMDB identifier for the title to play.
- * - `type`: Content type (for example, `"movie"` or `"tv"`), used to fetch sources.
- * - `title`: Human-readable title displayed in the UI and navigation header.
- *
- * @component
- * @returns A React element that renders the video player screen with controls.
- */
 const PlayerScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<PlayerScreenRouteProp>();
@@ -60,10 +41,10 @@ const PlayerScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [showQualityModal, setShowQualityModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [activeSubtitleIndex, setActiveSubtitleIndex] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch sources
   const {
     data: sourcesResponse,
     isLoading: isSourcesLoading,
@@ -72,18 +53,14 @@ const PlayerScreen: React.FC = () => {
   } = useQuery({
     queryKey: ['sources', tmdbId, type],
     queryFn: () => fetchSources(tmdbId, type),
-    gcTime: 0, // Do not cache permanently
+    gcTime: 0,
     staleTime: 0,
   });
 
-  // Select default source
   useEffect(() => {
     if (sourcesResponse && sourcesResponse.sources.length > 0) {
       const sourcesData = sourcesResponse.sources;
-      // 1. Filter for HLS
       const hlsSources = sourcesData.filter(s => s.type === 'hls' || s.url.includes('.m3u8'));
-      
-      // 2. Sort by quality (simple heuristic)
       const sorted = hlsSources.sort((a, b) => {
         if (a.quality === 'auto') return -1;
         if (b.quality === 'auto') return 1;
@@ -95,7 +72,6 @@ const PlayerScreen: React.FC = () => {
         return qB - qA;
       });
 
-      // 3. Pick best or fallback to first available
       const bestSource = sorted[0] || sourcesData[0];
       
       if (bestSource) {
@@ -114,10 +90,17 @@ const PlayerScreen: React.FC = () => {
     return sourcesResponse.subtitles.map((sub) => ({
       title: sub.label,
       language: (sub.language && sub.language.length === 2 ? sub.language : 'en') as ISO639_1,
-      type: TextTrackType.VTT, // Assuming VTT for now, or check extension
+      type: TextTrackType.VTT,
       uri: sub.url,
     }));
   }, [sourcesResponse]);
+
+  const filteredTextTracks = React.useMemo(() => {
+    if (!textTracks || textTracks.length === 0) return undefined;
+    if (activeSubtitleIndex === null) return undefined;
+    const idx = Math.min(activeSubtitleIndex, textTracks.length - 1);
+    return [textTracks[idx]];
+  }, [textTracks, activeSubtitleIndex]);
 
   const handleLoad = (data: OnLoadData) => {
     setDuration(data.duration);
@@ -134,12 +117,10 @@ const PlayerScreen: React.FC = () => {
 
   const handleError = (videoError: any) => {
     console.error('Video Error:', videoError);
-    // Try next source if available
     const sources = sourcesResponse?.sources;
     if (sources && currentSource) {
       const currentIndex = sources.indexOf(currentSource);
       if (currentIndex < sources.length - 1) {
-        console.log('Switching to next source...');
         setIsLoading(true);
         setCurrentSource(sources[currentIndex + 1]);
       } else {
@@ -162,13 +143,43 @@ const PlayerScreen: React.FC = () => {
     setShowControls(!showControls);
   };
 
-  // Auto-hide controls
   useEffect(() => {
     if (showControls && isPlaying) {
       const timer = setTimeout(() => setShowControls(false), 4000);
       return () => clearTimeout(timer);
     }
   }, [showControls, isPlaying]);
+
+  const itemTmd = tmdbId;
+
+  const saveProgressRef = useRef<() => void>(() => {});
+  saveProgressRef.current = () => {
+    if (!progress || !duration) return;
+    const userIdPromise = getUserId();
+    userIdPromise.then((userId) => {
+      if (!userId || !itemTmd) return;
+      const pct = Math.min(Math.round((progress / duration) * 100), 100);
+      if (pct > 1) {
+        updateProgress(userId, itemTmd, { progress: pct, duration }).catch(() => {});
+      }
+      if (pct > 5) {
+        updateWatchHistory(userId, itemTmd, { progress: pct }).catch(() => {});
+      }
+    }).catch(() => {});
+  };
+
+  // Save progress periodically every 15s
+  useEffect(() => {
+    const interval = setInterval(() => saveProgressRef.current(), 15000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Flush progress on unmount
+  useEffect(() => {
+    return () => {
+      saveProgressRef.current();
+    };
+  }, []);
 
   if (isSourcesLoading) {
     return (
@@ -182,7 +193,7 @@ const PlayerScreen: React.FC = () => {
   if (isSourcesError || error) {
     return (
       <ThemedView variant="background" style={styles.centerContainer}>
-        <ThemedText style={styles.errorText}>
+        <ThemedText variant="title3" style={styles.errorText}>
           {error || 'Failed to load stream'}
         </ThemedText>
         <TouchableOpacity
@@ -191,12 +202,12 @@ const PlayerScreen: React.FC = () => {
             refetch();
           }}
           style={[styles.button, { backgroundColor: colors.PRIMARY, borderRadius: radii.sm }]}>
-          <ThemedText>Retry</ThemedText>
+          <ThemedText variant="headline" style={{ color: '#FFF' }}>Retry</ThemedText>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={[styles.button, { marginTop: spacing.md }]}>
-          <ThemedText color="secondary">Go Back</ThemedText>
+          <ThemedText variant="headline" color="secondary">Go Back</ThemedText>
         </TouchableOpacity>
       </ThemedView>
     );
@@ -218,76 +229,70 @@ const PlayerScreen: React.FC = () => {
           paused={!isPlaying}
           onBuffer={() => setIsLoading(true)}
           onReadyForDisplay={() => setIsLoading(false)}
-          textTracks={textTracks}
+          textTracks={filteredTextTracks}
         />
       )}
 
-      {/* Clickable Area */}
       <TouchableOpacity
         style={StyleSheet.absoluteFill}
         activeOpacity={1}
         onPress={toggleControls}>
         
-        {/* Loading Indicator */}
         {isLoading && (
           <View style={styles.loadingOverlay}>
             <ActivityIndicator size="large" color={colors.PRIMARY} />
           </View>
         )}
 
-        {/* Controls Overlay */}
         {showControls && (
           <View style={styles.controlsOverlay}>
-            {/* Top Bar */}
             <View style={styles.topBar}>
               <TouchableOpacity
                 style={styles.iconButton}
                 onPress={() => navigation.goBack()}>
-                <ThemedText variant="h2">←</ThemedText>
+                <ThemedText variant="title1" style={{ color: '#FFF' }}>‹</ThemedText>
               </TouchableOpacity>
               
               <View style={styles.topRightControls}>
                 <TouchableOpacity
                   style={styles.iconButton}
-                  onPress={() => setShowQualityModal(true)}>
-                  <ThemedText variant="body">⚙ Quality</ThemedText>
+                  onPress={() => setShowSettingsModal(true)}>
+                  <ThemedText variant="body" style={{ color: '#FFF' }}>⚙</ThemedText>
                 </TouchableOpacity>
               </View>
             </View>
 
-            {/* Center Play/Pause */}
             <View style={styles.centerControls}>
               <TouchableOpacity
-                onPress={() => {
-                  videoRef.current?.seek(progress - 10);
-                }}
+                onPress={() => videoRef.current?.seek(progress - 10)}
                 style={styles.skipButton}>
-                <ThemedText variant="body">-10s</ThemedText>
+                <ThemedText variant="headline" style={{ color: '#FFF' }}>-10s</ThemedText>
               </TouchableOpacity>
 
               <TouchableOpacity
                 onPress={() => setIsPlaying(!isPlaying)}
                 style={[styles.playButton, { backgroundColor: colors.PRIMARY }]}>
-                <ThemedText variant="h1">{isPlaying ? '⏸' : '▶'}</ThemedText>
+                <ThemedText variant="largeTitle" style={{ color: '#FFF' }}>
+                  {isPlaying ? '⏸' : '▶'}
+                </ThemedText>
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={() => {
-                  videoRef.current?.seek(progress + 10);
-                }}
+                onPress={() => videoRef.current?.seek(progress + 10)}
                 style={styles.skipButton}>
-                <ThemedText variant="body">+10s</ThemedText>
+                <ThemedText variant="headline" style={{ color: '#FFF' }}>+10s</ThemedText>
               </TouchableOpacity>
             </View>
 
-            {/* Bottom Bar */}
             <View style={styles.bottomBar}>
-              <ThemedText variant="body" style={{ marginBottom: spacing.xs }}>
+              <ThemedText variant="body" style={{ color: '#FFF', marginBottom: spacing.xs }}>
                 {title}
               </ThemedText>
               <View style={styles.timeRow}>
-                <ThemedText variant="small">{formatTime(progress)}</ThemedText>
-                <View style={[styles.progressBar, { backgroundColor: colors.MUTED }]}>
+                <ThemedText variant="caption1" style={{ color: '#FFF' }}>
+                  {formatTime(progress)}
+                </ThemedText>
+                <View style={[styles.progressBar, { backgroundColor: 'rgba(255,255,255,0.3)' }]}>
                   <View 
                     style={[
                       styles.progressFill, 
@@ -298,53 +303,97 @@ const PlayerScreen: React.FC = () => {
                     ]} 
                   />
                 </View>
-                <ThemedText variant="small">{formatTime(duration)}</ThemedText>
+                <ThemedText variant="caption1" style={{ color: '#FFF' }}>
+                  {formatTime(duration)}
+                </ThemedText>
               </View>
             </View>
           </View>
         )}
       </TouchableOpacity>
 
-      {/* Quality Modal */}
       <Modal
-        visible={showQualityModal}
+        visible={showSettingsModal}
         transparent={true}
         animationType="slide"
-        onRequestClose={() => setShowQualityModal(false)}>
+        onRequestClose={() => setShowSettingsModal(false)}>
         <TouchableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}
-          onPress={() => setShowQualityModal(false)}>
+          onPress={() => setShowSettingsModal(false)}>
           <TouchableOpacity
             activeOpacity={1}
             onPress={(e) => e.stopPropagation()}
-            style={[styles.modalContent, { backgroundColor: colors.CARD, borderRadius: radii.md }]}>
-            <ThemedText variant="h2" style={{ marginBottom: spacing.md }}>Select Quality</ThemedText>
+            style={[styles.modalContent, { backgroundColor: colors.SURFACE, borderRadius: radii.lg }]}>
+            <ThemedText variant="title2" style={{ marginBottom: spacing.md }}>
+              Settings
+            </ThemedText>
+
+            {/* Quality */}
+            <ThemedText variant="footnote" color="secondary" style={styles.modalSectionTitle}>
+              QUALITY
+            </ThemedText>
             <FlatList
               data={sourcesResponse?.sources || []}
-              keyExtractor={(item, index) => `${item.quality}-${index}`}
+              keyExtractor={(item, index) => `q-${item.quality}-${index}`}
+              style={styles.modalList}
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={[
                     styles.qualityOption,
-                    // eslint-disable-next-line react-native/no-inline-styles
                     {
-                      borderBottomColor: colors.MUTED,
-                      backgroundColor: currentSource?.url === item.url ? colors.SURFACE : 'transparent',
+                      borderBottomColor: colors.SEPARATOR,
+                      backgroundColor: currentSource?.url === item.url ? colors.CARD : 'transparent',
                     },
                   ]}
                   onPress={() => {
                     seekOnLoad.current = progress;
                     setCurrentSource(item);
-                    setShowQualityModal(false);
                   }}>
-                  <ThemedText>
+                  <ThemedText variant="body">
                     {item.quality} ({item.provider})
                   </ThemedText>
-                  {currentSource?.url === item.url && <ThemedText color="primary">✓</ThemedText>}
+                  {currentSource?.url === item.url && (
+                    <ThemedText color="primary">✓</ThemedText>
+                  )}
                 </TouchableOpacity>
               )}
             />
+
+            {/* Subtitles */}
+            <ThemedText variant="footnote" color="secondary" style={{ ...styles.modalSectionTitle, marginTop: spacing.lg }}>
+              SUBTITLES
+            </ThemedText>
+            {textTracks && textTracks.length > 0 ? (
+              <FlatList
+                data={[{ label: 'Off' }, ...textTracks.map((t) => ({ label: t.title }))]}
+                keyExtractor={(item, index) => `s-${index}`}
+                style={styles.modalList}
+                renderItem={({ item, index }) => {
+                  const isOff = index === 0;
+                  const isActive = isOff ? activeSubtitleIndex === null : activeSubtitleIndex === index - 1;
+                  return (
+                    <TouchableOpacity
+                      style={[
+                        styles.qualityOption,
+                        { borderBottomColor: colors.SEPARATOR, backgroundColor: isActive ? colors.CARD : 'transparent' },
+                      ]}
+                      onPress={() => {
+                        setActiveSubtitleIndex(isOff ? null : index - 1);
+                      }}>
+                      <ThemedText variant="body">
+                        {isOff ? 'Off' : item.label}
+                      </ThemedText>
+                      {isActive && <ThemedText color="primary">✓</ThemedText>}
+                    </TouchableOpacity>
+                  );
+                }}
+              />
+            ) : (
+              <ThemedText variant="footnote" color="muted" style={styles.noSubtitles}>
+                No subtitles available
+              </ThemedText>
+            )}
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
@@ -395,9 +444,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   playButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     justifyContent: 'center',
     alignItems: 'center',
     marginHorizontal: 40,
@@ -424,8 +473,12 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   button: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+  },
+  errorText: {
+    marginBottom: 16,
+    textAlign: 'center',
   },
   modalOverlay: {
     flex: 1,
@@ -438,15 +491,25 @@ const styles = StyleSheet.create({
     maxHeight: '60%',
     padding: 20,
   },
+  modalSectionTitle: {
+    marginLeft: 4,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  modalList: {
+    flexGrow: 0,
+  },
+  noSubtitles: {
+    marginLeft: 8,
+    marginTop: 4,
+  },
   qualityOption: {
-    paddingVertical: 15,
-    borderBottomWidth: 1,
+    paddingVertical: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
     justifyContent: 'space-between',
-  },
-  errorText: {
-    marginBottom: 16,
-    textAlign: 'center',
+    alignItems: 'center',
   },
 });
 

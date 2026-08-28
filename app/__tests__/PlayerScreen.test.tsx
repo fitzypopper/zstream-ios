@@ -68,23 +68,24 @@ describe('PlayerScreen', () => {
     // Check title
     expect(screen.getByText('Test Movie')).toBeTruthy();
     
-    // Check controls
-    expect(screen.getByText('⚙ Quality')).toBeTruthy();
+    // Check controls (settings button)
+    expect(screen.getByText('⚙')).toBeTruthy();
   });
 
-  it('shows quality modal on press', async () => {
+  it('shows settings modal on press', async () => {
     const screen = createTestWrapper(<PlayerScreen />);
 
     await waitFor(() => {
       expect(screen.getByTestId('video-player')).toBeTruthy();
     });
 
-    const qualityButton = screen.getByText('⚙ Quality');
-    fireEvent.press(qualityButton);
+    const settingsButton = screen.getByText('⚙');
+    fireEvent.press(settingsButton);
 
     await waitFor(() => {
-      expect(screen.getByText('Select Quality')).toBeTruthy();
+      expect(screen.getByText('Settings')).toBeTruthy();
       expect(screen.getByText('1080p (Test)')).toBeTruthy();
+      expect(screen.getByText('No subtitles available')).toBeTruthy();
     });
   });
 });

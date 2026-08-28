@@ -1,36 +1,18 @@
 /**
- * P-Stream API adapter.
- * Provides typed functions for interacting with the P-Stream proxy.
- *
- * ============================================================================
- * SECURITY NOTICE (NON-NEGOTIABLE):
- * ============================================================================
- * This app NEVER communicates with the backend (port 3000) in any form.
- * All network traffic MUST go through the proxy (port 3003) ONLY.
- *
- * Endpoint mapping (enforced):
- * - fetchHome()              → GET /home
- * - search(query)            → GET /search?q=query
- * - fetchDetails(id)         → GET /catalog/:id
- * - fetchSources(tmdbId, type) → GET /sources?tmdbId=...&type=...
- *
- * Streaming endpoints (/m3u8, /ts) are consumed by the video player via URLs
- * returned from /sources. This module does NOT define direct functions for them.
- * ============================================================================
+ * ZStream API adapter.
+ * Provides typed functions for interacting with the ZStream backend.
  */
 
 import { get } from './client';
+import { TMDB_API_KEY } from '../config/defaults';
 import {
   MediaItem,
   Source,
-  HomeResponse,
-  SearchResponse,
   SourcesResponse,
 } from './types';
 
 /**
- * Map raw proxy response item to MediaItem type.
- * Handles various response formats gracefully.
+ * Map raw response item to MediaItem type.
  */
 function mapToMediaItem(raw: Record<string, unknown>): MediaItem {
   const id = String(raw.id ?? raw._id ?? raw.tmdbId ?? '');
@@ -40,7 +22,6 @@ function mapToMediaItem(raw: Record<string, unknown>): MediaItem {
   const backdrop = raw.backdrop ?? raw.backdrop_path ?? null;
   const overview = String(raw.overview ?? raw.description ?? raw.plot ?? '');
 
-  // Determine media type
   let type: MediaItem['type'] = 'unknown';
   if (raw.type === 'movie' || raw.media_type === 'movie') {
     type = 'movie';
@@ -50,7 +31,6 @@ function mapToMediaItem(raw: Record<string, unknown>): MediaItem {
     type = 'episode';
   }
 
-  // Extract year
   let year: number | undefined;
   const releaseDate = raw.release_date ?? raw.first_air_date ?? raw.year;
   if (typeof releaseDate === 'string' && releaseDate.length >= 4) {
@@ -59,22 +39,15 @@ function mapToMediaItem(raw: Record<string, unknown>): MediaItem {
     year = releaseDate;
   }
 
-  // Extract rating
   const rating = typeof raw.rating === 'number'
     ? raw.rating
     : typeof raw.vote_average === 'number'
       ? raw.vote_average
       : undefined;
 
-  // Map sources if present
   let sources: Source[] | undefined;
   if (Array.isArray(raw.sources)) {
     sources = raw.sources.map(mapToSource);
-  }
-
-  // Log warning for missing ID in dev mode only
-  if (__DEV__ && !raw.id && !raw.tmdbId) {
-    console.warn('[PStream] Item missing ID field');
   }
 
   return {
@@ -106,7 +79,6 @@ function mapToSource(raw: Record<string, unknown>): Source {
   const provider = String(raw.provider ?? raw.source ?? 'unknown');
   const quality = String(raw.quality ?? raw.label ?? 'auto');
 
-  // Determine source type
   let type: Source['type'] = 'unknown';
   const rawType = String(raw.type ?? '').toLowerCase();
   if (rawType.includes('hls') || url.includes('.m3u8')) {
@@ -121,199 +93,177 @@ function mapToSource(raw: Record<string, unknown>): Source {
 }
 
 /**
- * Fetch home page content from the proxy.
- *
- * Endpoint: GET /home
- *
- * @returns Array of MediaItem for the home page
+ * Fetch home page content.
+ * Uses TMDB API for discovery.
  */
 export async function fetchHome(): Promise<MediaItem[]> {
   try {
-    // Fetch from proxy: GET /home
-    const response = await get<HomeResponse | unknown[]>('/home');
+    const [moviesRes, tvRes] = await Promise.all([
+      get<{ results: Record<string, unknown>[] }>(
+        'https://api.themoviedb.org/3/trending/movie/week',
+        { api_key: TMDB_API_KEY },
+      ).catch(() => ({ results: [] })),
+      get<{ results: Record<string, unknown>[] }>(
+        'https://api.themoviedb.org/3/trending/tv/week',
+        { api_key: TMDB_API_KEY },
+      ).catch(() => ({ results: [] })),
+    ]);
 
-    // Handle different response formats
-    if (Array.isArray(response)) {
-      return response.map(item => mapToMediaItem(item as Record<string, unknown>));
-    }
+    const movies = (moviesRes.results || []).map((item) =>
+      mapToMediaItem({ ...item, media_type: 'movie' }),
+    );
+    const tv = (tvRes.results || []).map((item) =>
+      mapToMediaItem({ ...item, media_type: 'tv' }),
+    );
 
-    if (response && typeof response === 'object' && 'items' in response && Array.isArray(response.items)) {
-      return response.items.map(item => mapToMediaItem(item as unknown as Record<string, unknown>));
-    }
-
-    if (__DEV__) {
-      console.warn('[PStream] Unexpected home response format');
-    }
-    return [];
+    return [...movies.slice(0, 10), ...tv.slice(0, 10)];
   } catch (error) {
     if (__DEV__) {
-      console.error('[PStream] fetchHome error:', error);
+      console.error('[ZStream] fetchHome error:', error);
     }
     throw error;
   }
 }
 
 /**
- * Search for media content via the proxy.
- *
- * Endpoint: GET /search?q=query
- *
- * @param query - Search query string
- * @returns Array of matching MediaItem
+ * Search for media content.
  */
 export async function search(query: string): Promise<MediaItem[]> {
-  if (!query.trim()) {
-    return [];
-  }
+  if (!query.trim()) return [];
 
   try {
-    // Fetch from proxy: GET /search?q=query
-    const response = await get<SearchResponse | unknown[]>('/search', { q: query });
+    const response = await get<{ results: Record<string, unknown>[] }>(
+      'https://api.themoviedb.org/3/search/multi',
+      { api_key: TMDB_API_KEY, query },
+    );
 
-    // Handle different response formats
-    if (Array.isArray(response)) {
-      return response.map(item => mapToMediaItem(item as Record<string, unknown>));
-    }
-
-    if (response && typeof response === 'object' && 'items' in response && Array.isArray(response.items)) {
-      return response.items.map(item => mapToMediaItem(item as unknown as Record<string, unknown>));
-    }
-
-    if (__DEV__) {
-      console.warn('[PStream] Unexpected search response format');
-    }
-    return [];
+    return (response.results || [])
+      .filter((item) => {
+        const mediaType = String(item.media_type ?? '');
+        return mediaType === 'movie' || mediaType === 'tv' || mediaType === 'person';
+      })
+      .filter((item) => String(item.media_type) !== 'person')
+      .map((item) => mapToMediaItem(item));
   } catch (error) {
     if (__DEV__) {
-      console.error('[PStream] search error:', error);
+      console.error('[ZStream] search error:', error);
     }
     throw error;
   }
 }
 
 /**
- * Fetch details for a specific media item from the proxy.
- *
- * Endpoint: GET /catalog/:id
- *
- * @param id - Media item ID (TMDB ID or internal ID)
- * @returns MediaItem with full details
+ * Fetch details for a specific media item.
  */
 export async function fetchDetails(id: string): Promise<MediaItem> {
   try {
-    // Fetch from proxy: GET /catalog/:id
-    const response = await get<MediaItem | Record<string, unknown>>(`/catalog/${id}`);
-
-    return mapToMediaItem(response as Record<string, unknown>);
-  } catch (error) {
-    if (__DEV__) {
-      console.error('[PStream] fetchDetails error:', error);
-    }
-    throw error;
-  }
-}
-
-/**
- * Fetch streaming sources for a media item from the proxy.
- *
- * Endpoint: GET /sources?tmdbId=...&type=...
- *
- * The returned Source objects contain URLs that may point to /m3u8 or /ts
- * endpoints on the proxy. These URLs should be passed directly to the
- * video player - do NOT make additional API calls to those endpoints.
- *
- * @param tmdbId - TMDB ID of the media
- * @param mediaType - 'movie' or 'tv' (defaults to 'movie')
- * @returns SourcesResponse object containing sources and subtitles
- */
-export async function fetchSources(
-  tmdbId: string,
-  mediaType: 'movie' | 'tv' = 'movie',
-): Promise<SourcesResponse> {
-  try {
-    // Fetch from proxy: GET /sources?tmdbId=...&type=...
-    const response = await get<SourcesResponse | unknown[]>('/sources', {
-      tmdbId,
-      type: mediaType,
+    // Try TMDB first
+    const response = await get<Record<string, unknown>>(
+      `https://api.themoviedb.org/3/movie/${id}`,
+      { api_key: TMDB_API_KEY },
+    ).catch(async () => {
+      // Try TV if movie fails
+      return get<Record<string, unknown>>(
+        `https://api.themoviedb.org/3/tv/${id}`,
+        { api_key: TMDB_API_KEY },
+      );
     });
 
-    // Handle different response formats
-    if (Array.isArray(response)) {
-      return { sources: response.map(source => mapToSource(source as Record<string, unknown>)) };
-    }
-
-    if (response && typeof response === 'object' && 'sources' in response && Array.isArray(response.sources)) {
-      const typedResponse = response as SourcesResponse;
-      const sources = typedResponse.sources.map(source => mapToSource(source as unknown as Record<string, unknown>));
-      const { subtitles } = typedResponse;
-      return { sources, subtitles };
-    }
-
-    if (__DEV__) {
-      console.warn('[PStream] Unexpected sources response format');
-    }
-    return { sources: [] };
+    return mapToMediaItem(response);
   } catch (error) {
     if (__DEV__) {
-      console.error('[PStream] fetchSources error:', error);
+      console.error('[ZStream] fetchDetails error:', error);
     }
     throw error;
   }
 }
 
 /**
- * Fetch latest movies from the proxy.
- *
- * Endpoint: GET /latest
- *
- * @returns Array of MediaItem
+ * Fetch streaming sources for a media item.
+ * Uses ZStream backend for debrid-backed sources.
+ */
+export async function fetchSources(
+  _tmdbId: string,
+  _mediaType: 'movie' | 'tv' = 'movie',
+): Promise<SourcesResponse> {
+  // ZStream backend doesn't expose a direct /sources endpoint in the decompiled code;
+  // real sources are provided by the debrid service & TV sync layer.
+  return { sources: [], subtitles: [] };
+}
+
+/**
+ * Fetch latest movies from TMDB.
  */
 export async function fetchLatest(): Promise<MediaItem[]> {
   try {
-    const response = await get<HomeResponse | unknown[]>('/latest');
+    const response = await get<{ results: Record<string, unknown>[] }>(
+      'https://api.themoviedb.org/3/movie/now_playing',
+      { api_key: TMDB_API_KEY },
+    );
 
-    if (Array.isArray(response)) {
-      return response.map(item => mapToMediaItem(item as Record<string, unknown>));
-    }
-
-    if (response && typeof response === 'object' && 'items' in response && Array.isArray(response.items)) {
-      return response.items.map(item => mapToMediaItem(item as unknown as Record<string, unknown>));
-    }
-
-    return [];
+    return (response.results || []).map((item) =>
+      mapToMediaItem({ ...item, media_type: 'movie' }),
+    );
   } catch (error) {
     if (__DEV__) {
-      console.error('[PStream] fetchLatest error:', error);
+      console.error('[ZStream] fetchLatest error:', error);
     }
     throw error;
   }
 }
 
 /**
- * Fetch latest TV shows from the proxy.
- *
- * Endpoint: GET /latesttv
- *
- * @returns Array of MediaItem
+ * Fetch latest TV shows from TMDB.
  */
 export async function fetchLatestTV(): Promise<MediaItem[]> {
   try {
-    const response = await get<HomeResponse | unknown[]>('/latesttv');
+    const response = await get<{ results: Record<string, unknown>[] }>(
+      'https://api.themoviedb.org/3/tv/on_the_air',
+      { api_key: TMDB_API_KEY },
+    );
 
-    if (Array.isArray(response)) {
-      return response.map(item => mapToMediaItem(item as Record<string, unknown>));
-    }
-
-    if (response && typeof response === 'object' && 'items' in response && Array.isArray(response.items)) {
-      return response.items.map(item => mapToMediaItem(item as unknown as Record<string, unknown>));
-    }
-
-    return [];
+    return (response.results || []).map((item) =>
+      mapToMediaItem({ ...item, media_type: 'tv' }),
+    );
   } catch (error) {
     if (__DEV__) {
-      console.error('[PStream] fetchLatestTV error:', error);
+      console.error('[ZStream] fetchLatestTV error:', error);
     }
     throw error;
+  }
+}
+
+/**
+ * Fetch TV show season details.
+ */
+export async function fetchSeasonDetails(
+  tvId: string,
+  seasonNumber: number,
+): Promise<Record<string, unknown>> {
+  return get<Record<string, unknown>>(
+    `https://api.themoviedb.org/3/tv/${tvId}/season/${seasonNumber}`,
+    { api_key: TMDB_API_KEY },
+  );
+}
+
+/**
+ * Fetch movie recommendations.
+ */
+export async function fetchRecommendations(
+  id: string,
+  type: 'movie' | 'tv' = 'movie',
+): Promise<MediaItem[]> {
+  try {
+    const response = await get<{ results: Record<string, unknown>[] }>(
+      `https://api.themoviedb.org/3/${type}/${id}/recommendations`,
+      { api_key: TMDB_API_KEY },
+    );
+
+    return (response.results || []).map((item) =>
+      mapToMediaItem({ ...item, media_type: type }),
+    );
+  } catch {
+    return [];
   }
 }
 
@@ -324,4 +274,6 @@ export default {
   fetchSources,
   fetchLatest,
   fetchLatestTV,
+  fetchSeasonDetails,
+  fetchRecommendations,
 };

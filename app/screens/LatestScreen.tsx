@@ -1,3 +1,6 @@
+/**
+ * LatestScreen - ZStream latest movies with Apple-native iOS styling.
+ */
 import React, { useCallback } from 'react';
 import {
   StyleSheet,
@@ -41,13 +44,13 @@ const LatestScreen: React.FC = () => {
   });
 
   const posterWidth = React.useMemo(() => {
-    const baseColumns = Math.max(3, Math.floor((viewportWidth - spacing.md * 2) / 110));
+    const baseColumns = Math.max(2, Math.floor((viewportWidth - spacing.md * 2) / 120));
     const gap = spacing.sm;
     return Math.floor((viewportWidth - spacing.md * 2 - gap * (baseColumns - 1)) / baseColumns);
   }, [viewportWidth, spacing]);
 
   const numColumns = React.useMemo(() => {
-    return Math.max(3, Math.floor((viewportWidth - spacing.md * 2) / 110));
+    return Math.max(2, Math.floor((viewportWidth - spacing.md * 2) / 120));
   }, [viewportWidth, spacing]);
 
   const onPressCard = useCallback((item: MediaItem) => {
@@ -66,7 +69,7 @@ const LatestScreen: React.FC = () => {
   if (isLoading) {
     return (
       <ThemedView variant="background" style={styles.centerContainer}>
-        <ThemedText>Loading latest movies...</ThemedText>
+        <ThemedText color="secondary">Loading latest movies...</ThemedText>
       </ThemedView>
     );
   }
@@ -74,15 +77,13 @@ const LatestScreen: React.FC = () => {
   if (isError) {
     return (
       <ThemedView variant="background" style={styles.centerContainer}>
-        <ThemedText style={{ marginBottom: spacing.md }}>Failed to load latest movies</ThemedText>
+        <ThemedText variant="title3" style={{ marginBottom: spacing.md }}>
+          Failed to load
+        </ThemedText>
         <TouchableOpacity
           onPress={() => refetch()}
-          style={{
-            backgroundColor: colors.PRIMARY,
-            padding: spacing.sm,
-            borderRadius: radii.sm,
-          }}>
-          <ThemedText>Retry</ThemedText>
+          style={[{ backgroundColor: colors.PRIMARY, borderRadius: radii.sm, paddingHorizontal: 20, paddingVertical: 10 }]}>
+          <ThemedText variant="headline" style={{ color: '#FFF' }}>Retry</ThemedText>
         </TouchableOpacity>
       </ThemedView>
     );
@@ -94,8 +95,17 @@ const LatestScreen: React.FC = () => {
         data={data}
         keyExtractor={(item) => item.id}
         numColumns={numColumns}
-        key={numColumns} // Force re-render when columns change
-        contentContainerStyle={{ padding: spacing.md }}
+        key={numColumns}
+        ListHeaderComponent={
+          <ThemedText variant="largeTitle" style={{ ...styles.header, paddingHorizontal: spacing.md }}>
+            Movies
+          </ThemedText>
+        }
+        contentContainerStyle={{ paddingBottom: 100 }}
+        columnWrapperStyle={[
+          styles.columnWrapper,
+          { paddingHorizontal: spacing.md },
+        ]}
         renderItem={renderItem}
         refreshControl={
           <RefreshControl
@@ -117,6 +127,13 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  header: {
+    paddingTop: 100,
+    paddingBottom: 16,
+  },
+  columnWrapper: {
+    justifyContent: 'space-between',
   },
 });
 

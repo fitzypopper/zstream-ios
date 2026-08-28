@@ -1,11 +1,11 @@
 /**
- * PStream App - Main entry point
- * Wraps the app with ThemeProvider for global dark theme support.
+ * ZStream App - Main entry point
+ * Wraps the app with ThemeProvider and handles authentication state.
  *
  * @format
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'react-native';
 import { ThemeProvider } from './theme/ThemeProvider';
 import { colors } from './theme/colors';

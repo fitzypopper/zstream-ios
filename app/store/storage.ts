@@ -78,6 +78,11 @@ export const removeItem = storage.removeItem;
 // Export storage keys for consistency
 export const STORAGE_KEYS = {
   INSTANCE_URL: 'instance_url',
+  AUTH_TOKEN: 'auth_token',
+  USER_PROFILE: 'user_profile',
+  USER_ID: 'user_id',
+  PAIRED_TVS: 'paired_tvs',
+  TRAKT_SESSION: 'trakt_session',
 } as const;
 
 export default storage;

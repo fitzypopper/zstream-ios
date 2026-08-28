@@ -1,24 +1,30 @@
 /**
- * SettingsScreen - App settings and preferences.
- * Demonstrates themed settings UI with toggles and options.
+ * SettingsScreen - ZStream settings with Apple-native iOS styling.
+ * Uses grouped list style like iOS Settings app.
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
   Switch,
+  Alert,
 } from 'react-native';
+import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeProvider';
 import { ThemedView } from '../components/ThemedView';
 import { ThemedText } from '../components/ThemedText';
+import { clearUserData, notifyAuthChanged } from '../config/env';
+import { getTVSyncManager } from '../services/tvSync';
+import { RootStackParamList } from '../navigation/types';
 
 interface SettingItemProps {
   title: string;
   subtitle?: string;
   rightElement?: React.ReactNode;
   onPress?: () => void;
+  showDisclosure?: boolean;
 }
 
 const SettingItem: React.FC<SettingItemProps> = ({
@@ -26,263 +32,210 @@ const SettingItem: React.FC<SettingItemProps> = ({
   subtitle,
   rightElement,
   onPress,
+  showDisclosure = true,
 }) => {
-  const { colors, spacing, radii } = useTheme();
-
   return (
     <TouchableOpacity
-      style={[
-        styles.settingItem,
-        {
-          backgroundColor: colors.CARD,
-          borderRadius: radii.md,
-          padding: spacing.md,
-          marginBottom: spacing.sm,
-        },
-      ]}
+      style={[styles.settingItem, { paddingVertical: 12, paddingHorizontal: 16 }]}
       onPress={onPress}
-      activeOpacity={onPress ? 0.7 : 1}
+      activeOpacity={onPress ? 0.6 : 1}
       disabled={!onPress}>
       <View style={styles.settingInfo}>
         <ThemedText variant="body">{title}</ThemedText>
         {subtitle && (
-          <ThemedText variant="small" color="secondary">
+          <ThemedText variant="footnote" color="secondary">
             {subtitle}
           </ThemedText>
         )}
       </View>
-      {rightElement}
+      <View style={styles.settingRight}>
+        {rightElement}
+        {showDisclosure && onPress && (
+          <ThemedText variant="body" color="muted" style={styles.disclosure}>
+            ›
+          </ThemedText>
+        )}
+      </View>
     </TouchableOpacity>
   );
 };
 
 const SettingsScreen: React.FC = () => {
-  const { colors, spacing, radii } = useTheme();
-
-  // Settings state
-  const [notifications, setNotifications] = useState(true);
+  const { colors, radii } = useTheme();
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const [autoPlay, setAutoPlay] = useState(true);
-  const [downloadWifi, setDownloadWifi] = useState(true);
+  const [skipCredits, setSkipCredits] = useState(true);
+  const [pairedDeviceCount, setPairedDeviceCount] = useState(0);
+
+  useEffect(() => {
+    getTVSyncManager()
+      .getPairedTVs()
+      .then((tvs) => setPairedDeviceCount(tvs.length))
+      .catch(() => {});
+  }, []);
+
+  const handleSignOut = () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            await clearUserData();
+            notifyAuthChanged();
+            // RootNavigator swaps to Login screen via auth listener
+          },
+        },
+      ],
+    );
+  };
 
   return (
     <ThemedView variant="background" style={styles.container}>
-      {/* Header */}
-      <View style={[styles.header, { padding: spacing.md }]}>
-        <ThemedText variant="h1">Settings</ThemedText>
-      </View>
-
       <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={{
-          paddingHorizontal: spacing.md,
-          paddingBottom: spacing.xl,
-        }}>
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}>
         {/* Account Section */}
         <View style={styles.section}>
-          <ThemedText
-            variant="small"
-            color="secondary"
-            style={{ marginBottom: spacing.sm, marginLeft: spacing.xs }}>
+          <ThemedText variant="footnote" color="secondary" style={styles.sectionHeader}>
             ACCOUNT
           </ThemedText>
-
-          <SettingItem
-            title="Profile"
-            subtitle="Manage your account details"
-            rightElement={
-              <ThemedText variant="body" color="muted">
-                →
-              </ThemedText>
-            }
-            onPress={() => {}}
-          />
-
-          <SettingItem
-            title="Subscription"
-            subtitle="Premium • Renews Jan 2025"
-            rightElement={
-              <View
-                style={[
-                  styles.badge,
-                  {
-                    backgroundColor: colors.SUCCESS,
-                    borderRadius: radii.sm,
-                    paddingHorizontal: spacing.sm,
-                    paddingVertical: spacing.xs,
-                  },
-                ]}>
-                <ThemedText variant="small">Active</ThemedText>
-              </View>
-            }
-          />
+          <View style={[styles.sectionContent, { backgroundColor: colors.SURFACE, borderRadius: radii.md }]}>
+            <SettingItem
+              title="Profile"
+              subtitle="Manage your account"
+              onPress={() => {}}
+            />
+            <View style={[styles.separator, { backgroundColor: colors.SEPARATOR }]} />
+            <SettingItem
+              title="Subscription"
+              subtitle="Premium • Active"
+              rightElement={
+                <View style={[styles.badge, { backgroundColor: colors.SUCCESS }]}>
+                  <ThemedText variant="caption2" style={styles.badgeText}>Active</ThemedText>
+                </View>
+              }
+              onPress={() => {}}
+            />
+          </View>
         </View>
 
         {/* Playback Section */}
-        <View style={[styles.section, { marginTop: spacing.lg }]}>
-          <ThemedText
-            variant="small"
-            color="secondary"
-            style={{ marginBottom: spacing.sm, marginLeft: spacing.xs }}>
+        <View style={styles.section}>
+          <ThemedText variant="footnote" color="secondary" style={styles.sectionHeader}>
             PLAYBACK
           </ThemedText>
-
-          <SettingItem
-            title="Auto-play next episode"
-            subtitle="Automatically play the next episode"
-            rightElement={
-              <Switch
-                value={autoPlay}
-                onValueChange={setAutoPlay}
-                trackColor={{ false: colors.MUTED, true: colors.PRIMARY }}
-                thumbColor={colors.TEXT_PRIMARY}
-              />
-            }
-          />
-
-          <SettingItem
-            title="Video Quality"
-            subtitle="Auto (recommended)"
-            rightElement={
-              <ThemedText variant="body" color="muted">
-                →
-              </ThemedText>
-            }
-            onPress={() => {}}
-          />
+          <View style={[styles.sectionContent, { backgroundColor: colors.SURFACE, borderRadius: radii.md }]}>
+            <SettingItem
+              title="Auto-play next episode"
+              rightElement={
+                <Switch
+                  value={autoPlay}
+                  onValueChange={setAutoPlay}
+                  trackColor={{ false: colors.FILL, true: colors.PRIMARY }}
+                />
+              }
+              showDisclosure={false}
+            />
+            <View style={[styles.separator, { backgroundColor: colors.SEPARATOR }]} />
+            <SettingItem
+              title="Skip credits"
+              rightElement={
+                <Switch
+                  value={skipCredits}
+                  onValueChange={setSkipCredits}
+                  trackColor={{ false: colors.FILL, true: colors.PRIMARY }}
+                />
+              }
+              showDisclosure={false}
+            />
+            <View style={[styles.separator, { backgroundColor: colors.SEPARATOR }]} />
+            <SettingItem
+              title="Video Quality"
+              subtitle="Auto (recommended)"
+              onPress={() => {}}
+            />
+          </View>
         </View>
 
-        {/* Downloads Section */}
-        <View style={[styles.section, { marginTop: spacing.lg }]}>
-          <ThemedText
-            variant="small"
-            color="secondary"
-            style={{ marginBottom: spacing.sm, marginLeft: spacing.xs }}>
-            DOWNLOADS
+        {/* Integrations Section */}
+        <View style={styles.section}>
+          <ThemedText variant="footnote" color="secondary" style={styles.sectionHeader}>
+            INTEGRATIONS
           </ThemedText>
-
-          <SettingItem
-            title="Download over Wi-Fi only"
-            subtitle="Prevent downloads on mobile data"
-            rightElement={
-              <Switch
-                value={downloadWifi}
-                onValueChange={setDownloadWifi}
-                trackColor={{ false: colors.MUTED, true: colors.PRIMARY }}
-                thumbColor={colors.TEXT_PRIMARY}
-              />
-            }
-          />
-
-          <SettingItem
-            title="Download Quality"
-            subtitle="High (1080p)"
-            rightElement={
-              <ThemedText variant="body" color="muted">
-                →
-              </ThemedText>
-            }
-            onPress={() => {}}
-          />
-
-          <SettingItem
-            title="Storage Used"
-            subtitle="2.4 GB of 64 GB"
-            rightElement={
-              <TouchableOpacity
-                style={[
-                  styles.clearButton,
-                  styles.clearButtonBorder,
-                  {
-                    borderColor: colors.ERROR,
-                    borderRadius: radii.sm,
-                    paddingHorizontal: spacing.sm,
-                    paddingVertical: spacing.xs,
-                  },
-                ]}>
-                <ThemedText variant="small" color="error">
-                  Clear
-                </ThemedText>
-              </TouchableOpacity>
-            }
-          />
+          <View style={[styles.sectionContent, { backgroundColor: colors.SURFACE, borderRadius: radii.md }]}>
+            <SettingItem
+              title="Trakt"
+              subtitle="Sync your watch history"
+              onPress={() => navigation.navigate('Trakt')}
+            />
+            <View style={[styles.separator, { backgroundColor: colors.SEPARATOR }]} />
+            <SettingItem
+              title="Debrid Service"
+              subtitle="RealDebrid"
+              onPress={() => {}}
+            />
+          </View>
         </View>
 
-        {/* Notifications Section */}
-        <View style={[styles.section, { marginTop: spacing.lg }]}>
-          <ThemedText
-            variant="small"
-            color="secondary"
-            style={{ marginBottom: spacing.sm, marginLeft: spacing.xs }}>
-            NOTIFICATIONS
+        {/* Sync Section */}
+        <View style={styles.section}>
+          <ThemedText variant="footnote" color="secondary" style={styles.sectionHeader}>
+            SYNC
           </ThemedText>
-
-          <SettingItem
-            title="Push Notifications"
-            subtitle="Get notified about new releases"
-            rightElement={
-              <Switch
-                value={notifications}
-                onValueChange={setNotifications}
-                trackColor={{ false: colors.MUTED, true: colors.PRIMARY }}
-                thumbColor={colors.TEXT_PRIMARY}
-              />
-            }
-          />
+          <View style={[styles.sectionContent, { backgroundColor: colors.SURFACE, borderRadius: radii.md }]}>
+            <SettingItem
+              title="Pair with TV"
+              subtitle="Sync content to your TV"
+              onPress={() => navigation.navigate('TVSync')}
+            />
+            <View style={[styles.separator, { backgroundColor: colors.SEPARATOR }]} />
+            <SettingItem
+              title="Paired Devices"
+              subtitle={`${pairedDeviceCount} device${pairedDeviceCount === 1 ? '' : 's'}`}
+              onPress={() => navigation.navigate('TVSync')}
+            />
+          </View>
         </View>
 
         {/* About Section */}
-        <View style={[styles.section, { marginTop: spacing.lg }]}>
-          <ThemedText
-            variant="small"
-            color="secondary"
-            style={{ marginBottom: spacing.sm, marginLeft: spacing.xs }}>
+        <View style={styles.section}>
+          <ThemedText variant="footnote" color="secondary" style={styles.sectionHeader}>
             ABOUT
           </ThemedText>
-
-          <SettingItem
-            title="Version"
-            subtitle="1.0.0 (Build 1)"
-          />
-
-          <SettingItem
-            title="Terms of Service"
-            rightElement={
-              <ThemedText variant="body" color="muted">
-                →
-              </ThemedText>
-            }
-            onPress={() => {}}
-          />
-
-          <SettingItem
-            title="Privacy Policy"
-            rightElement={
-              <ThemedText variant="body" color="muted">
-                →
-              </ThemedText>
-            }
-            onPress={() => {}}
-          />
+          <View style={[styles.sectionContent, { backgroundColor: colors.SURFACE, borderRadius: radii.md }]}>
+            <SettingItem
+              title="Version"
+              subtitle="1.0.0 (Build 1)"
+              showDisclosure={false}
+            />
+            <View style={[styles.separator, { backgroundColor: colors.SEPARATOR }]} />
+            <SettingItem
+              title="Terms of Service"
+              onPress={() => {}}
+            />
+            <View style={[styles.separator, { backgroundColor: colors.SEPARATOR }]} />
+            <SettingItem
+              title="Privacy Policy"
+              onPress={() => {}}
+            />
+          </View>
         </View>
 
         {/* Sign Out Button */}
         <TouchableOpacity
-          style={[
-            styles.signOutButton,
-            styles.signOutButtonBorder,
-            {
-              backgroundColor: colors.CARD,
-              borderRadius: radii.md,
-              padding: spacing.md,
-              marginTop: spacing.xl,
-              borderColor: colors.ERROR,
-            },
-          ]}
-          activeOpacity={0.7}>
+          style={[styles.signOutButton, { backgroundColor: colors.SURFACE, borderRadius: radii.md }]}
+          onPress={handleSignOut}
+          activeOpacity={0.8}>
           <ThemedText variant="body" color="error" style={styles.signOutText}>
             Sign Out
           </ThemedText>
         </TouchableOpacity>
+
+        <View style={{ height: 100 }} />
       </ScrollView>
     </ThemedView>
   );
@@ -292,11 +245,22 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {},
-  scrollView: {
-    flex: 1,
+  scrollContent: {
+    paddingTop: 100,
+    paddingHorizontal: 16,
   },
-  section: {},
+  section: {
+    marginBottom: 24,
+  },
+  sectionHeader: {
+    marginLeft: 16,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  sectionContent: {
+    overflow: 'hidden',
+  },
   settingItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -306,16 +270,29 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 16,
   },
-  badge: {},
-  clearButton: {},
-  clearButtonBorder: {
-    borderWidth: 1,
+  settingRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  disclosure: {
+    marginLeft: 4,
+  },
+  separator: {
+    height: StyleSheet.hairlineWidth,
+    marginLeft: 16,
+  },
+  badge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  badgeText: {
+    color: '#FFF',
+    fontWeight: '600',
   },
   signOutButton: {
     alignItems: 'center',
-  },
-  signOutButtonBorder: {
-    borderWidth: 1,
+    paddingVertical: 14,
   },
   signOutText: {
     fontWeight: '600',

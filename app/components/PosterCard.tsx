@@ -1,6 +1,6 @@
 /**
- * PosterCard - Reusable media poster component.
- * Displays poster image, title and optional progress overlay.
+ * PosterCard - Reusable media poster component for ZStream.
+ * Apple-native styling with smooth transitions and subtle effects.
  */
 import React, { useState } from 'react';
 import {
@@ -33,7 +33,7 @@ const PosterCard: React.FC<PosterCardProps> = ({
   progress = 0,
   containerStyle,
 }) => {
-  const { colors, radii, spacing, typography } = useTheme();
+  const { colors, radii, typography } = useTheme();
   const [loaded, setLoaded] = useState(false);
 
   const height = Math.round(width * 1.5);
@@ -43,7 +43,7 @@ const PosterCard: React.FC<PosterCardProps> = ({
     <TouchableOpacity
       accessibilityRole="button"
       accessibilityLabel={`${item.title}. Open details`}
-      activeOpacity={0.8}
+      activeOpacity={0.85}
       onPress={() => onPress(item)}
       style={[
         styles.container,
@@ -69,22 +69,34 @@ const PosterCard: React.FC<PosterCardProps> = ({
         )}
       </View>
 
-      <Text
-        numberOfLines={1}
-        style={{
-          color: colors.TEXT_PRIMARY,
-          marginTop: spacing.xs,
-          fontSize: typography.fontSize.small,
-        }}>
-        {item.title}
-      </Text>
+      <View style={styles.infoContainer}>
+        <Text
+          numberOfLines={1}
+          style={{
+            color: colors.TEXT_PRIMARY,
+            fontSize: typography.fontSize.footnote,
+            fontWeight: '500',
+          }}>
+          {item.title}
+        </Text>
+        {item.year && (
+          <Text
+            style={{
+              color: colors.TEXT_SECONDARY,
+              fontSize: typography.fontSize.caption1,
+              marginTop: 2,
+            }}>
+            {item.year}
+          </Text>
+        )}
+      </View>
 
       {showProgress && (
         <View
           style={[
             styles.progressBarContainer,
             {
-              backgroundColor: colors.MUTED,
+              backgroundColor: colors.FILL,
               borderBottomLeftRadius: radii.md,
               borderBottomRightRadius: radii.md,
             },
@@ -94,7 +106,7 @@ const PosterCard: React.FC<PosterCardProps> = ({
               styles.progressBarFill,
               {
                 width: `${Math.max(0, Math.min(1, progress)) * 100}%`,
-                backgroundColor: colors.ACCENT,
+                backgroundColor: colors.PRIMARY,
                 borderBottomLeftRadius: radii.md,
                 borderBottomRightRadius: radii.md,
               },
@@ -108,6 +120,7 @@ const PosterCard: React.FC<PosterCardProps> = ({
 
 const styles = StyleSheet.create({
   container: {
+    overflow: 'hidden',
   },
   imageWrapper: {
     overflow: 'hidden',
@@ -126,12 +139,20 @@ const styles = StyleSheet.create({
   loadingOverlay: {
     position: 'absolute',
   },
+  infoContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 8,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+  },
   progressBarContainer: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    height: 4,
+    height: 3,
   },
   progressBarFill: {
     height: '100%',
@@ -139,5 +160,3 @@ const styles = StyleSheet.create({
 });
 
 export default PosterCard;
-
-

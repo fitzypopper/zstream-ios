@@ -1,27 +1,33 @@
 /**
- * RootNavigator - Main navigation configuration.
- * Sets up bottom tabs and stack navigation with dark theme styling.
+ * RootNavigator - Main navigation configuration for ZStream.
+ * Sets up bottom tabs and stack navigation with iOS-native styling.
  */
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { NavigationContainer } from '@react-navigation/native';
+import { Platform } from 'react-native';
 
+import LoginScreen from '../screens/LoginScreen';
 import HomeScreen from '../screens/HomeScreen';
 import LatestScreen from '../screens/LatestScreen';
 import LatestTvScreen from '../screens/LatestTvScreen';
 import SearchScreen from '../screens/SearchScreen';
+import LibraryScreen from '../screens/LibraryScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import TraktScreen from '../screens/TraktScreen';
+import TVSyncScreen from '../screens/TVSyncScreen';
 import DetailsScreen from '../screens/DetailsScreen';
 import PlayerScreen from '../screens/PlayerScreen';
 import { RootStackParamList, TabParamList } from './types';
 import { colors } from '../theme/colors';
+import { isAuthenticated, addAuthListener } from '../config/env';
 
 const Tab = createBottomTabNavigator<TabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 /**
- * TabNavigator - Bottom tab navigation with themed styling.
+ * TabNavigator - Bottom tab navigation with iOS-native styling.
  */
 const TabNavigator = () => {
   return (
@@ -30,42 +36,99 @@ const TabNavigator = () => {
         headerShown: false,
         tabBarStyle: {
           backgroundColor: colors.SURFACE,
-          borderTopColor: colors.CARD,
-          borderTopWidth: 1,
+          borderTopColor: colors.SEPARATOR,
+          borderTopWidth: 0.5,
+          elevation: 0,
+          shadowOpacity: 0,
         },
         tabBarActiveTintColor: colors.PRIMARY,
         tabBarInactiveTintColor: colors.MUTED,
         tabBarLabelStyle: {
-          fontSize: 12,
+          fontSize: 10,
           fontWeight: '500',
+          ...Platform.select({ ios: { fontFamily: 'System' } }),
         },
       }}>
       <Tab.Screen
         name="Home"
         component={HomeScreen}
-        options={{ tabBarLabel: 'Home' }}
+        options={{
+          tabBarLabel: 'Home',
+          tabBarIcon: ({ color, size }) => (
+            <TabIcon name="house.fill" color={color} size={size} />
+          ),
+        }}
       />
       <Tab.Screen
         name="Latest"
         component={LatestScreen}
-        options={{ tabBarLabel: 'Movies' }}
+        options={{
+          tabBarLabel: 'Movies',
+          tabBarIcon: ({ color, size }) => (
+            <TabIcon name="film" color={color} size={size} />
+          ),
+        }}
       />
       <Tab.Screen
         name="LatestTV"
         component={LatestTvScreen}
-        options={{ tabBarLabel: 'TV Shows' }}
+        options={{
+          tabBarLabel: 'TV Shows',
+          tabBarIcon: ({ color, size }) => (
+            <TabIcon name="tv" color={color} size={size} />
+          ),
+        }}
       />
       <Tab.Screen
         name="Search"
         component={SearchScreen}
-        options={{ tabBarLabel: 'Search' }}
+        options={{
+          tabBarLabel: 'Search',
+          tabBarIcon: ({ color, size }) => (
+            <TabIcon name="magnifyingglass" color={color} size={size} />
+          ),
+        }}
       />
       <Tab.Screen
-        name="Settings"
-        component={SettingsScreen}
-        options={{ tabBarLabel: 'Settings' }}
+        name="Library"
+        component={LibraryScreen}
+        options={{
+          tabBarLabel: 'Library',
+          tabBarIcon: ({ color, size }) => (
+            <TabIcon name="square.stack" color={color} size={size} />
+          ),
+        }}
       />
     </Tab.Navigator>
+  );
+};
+
+/**
+ * Simple tab icon component using Unicode symbols.
+ * In production, you'd use react-native-sfsymbols or similar.
+ */
+const TabIcon: React.FC<{ name: string; color: string; size: number }> = ({
+  name,
+  color,
+  size,
+}) => {
+  const iconMap: Record<string, string> = {
+    'house.fill': '🏠',
+    'film': '🎬',
+    'tv': '📺',
+    'magnifyingglass': '🔍',
+    'square.stack': '📚',
+    'gearshape': '⚙️',
+  };
+
+  return (
+    <React.Fragment>
+      {React.createElement(
+        require('react-native').Text,
+        { style: { fontSize: size - 4, color } },
+        iconMap[name] || '•',
+      )}
+    </React.Fragment>
   );
 };
 
@@ -73,43 +136,101 @@ const TabNavigator = () => {
  * RootNavigator - Main stack navigator wrapping tab navigation.
  */
 const RootNavigator = () => {
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+
+  const checkAuth = useCallback(async () => {
+    const authenticated = await isAuthenticated();
+    setIsLoggedIn(authenticated);
+  }, []);
+
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
+
+  // Listen for auth state changes (login/logout)
+  useEffect(() => {
+    const removeListener = addAuthListener((authenticated) => {
+      setIsLoggedIn(authenticated);
+    });
+    return () => removeListener();
+  }, []);
+
+  if (isLoggedIn === null) {
+    return null; // Loading state
+  }
+
   return (
     <NavigationContainer>
       <Stack.Navigator
         screenOptions={{
           headerStyle: {
-            backgroundColor: colors.SURFACE,
+            backgroundColor: colors.BACKGROUND,
           },
-          headerTintColor: colors.TEXT_PRIMARY,
+          headerTintColor: colors.PRIMARY,
           headerTitleStyle: {
             fontWeight: '600',
+            color: colors.TEXT_PRIMARY,
           },
           contentStyle: {
             backgroundColor: colors.BACKGROUND,
           },
+          headerShadowVisible: false,
+          headerBackTitle: 'Back',
         }}>
-        <Stack.Screen
-          name="Main"
-          component={TabNavigator}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="Details"
-          component={DetailsScreen}
-          options={{
-            headerTitle: 'Details',
-            headerTransparent: true,
-            headerTintColor: colors.TEXT_PRIMARY,
-          }}
-        />
-        <Stack.Screen
-          name="Player"
-          component={PlayerScreen}
-          options={{
-            headerShown: false,
-            animation: 'fade',
-          }}
-        />
+        {!isLoggedIn ? (
+          <Stack.Screen
+            name="Login"
+            options={{ headerShown: false }}
+            component={LoginScreen}
+          />
+        ) : (
+          <>
+            <Stack.Screen
+              name="Main"
+              component={TabNavigator}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="Details"
+              component={DetailsScreen}
+              options={{
+                headerTitle: '',
+                headerTransparent: true,
+                headerTintColor: colors.TEXT_PRIMARY,
+              }}
+            />
+            <Stack.Screen
+              name="Player"
+              component={PlayerScreen}
+              options={{
+                headerShown: false,
+                animation: 'fade',
+              }}
+            />
+            <Stack.Screen
+              name="Settings"
+              component={SettingsScreen}
+              options={{
+                headerTitle: 'Settings',
+                headerLargeTitle: true,
+              }}
+            />
+            <Stack.Screen
+              name="TVSync"
+              component={TVSyncScreen}
+              options={{
+                headerTitle: 'Sync with TV',
+              }}
+            />
+            <Stack.Screen
+              name="Trakt"
+              component={TraktScreen}
+              options={{
+                headerTitle: 'Trakt',
+              }}
+            />
+          </>
+        )}
       </Stack.Navigator>
     </NavigationContainer>
   );

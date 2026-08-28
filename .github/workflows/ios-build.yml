@@ -1,0 +1,87 @@
+name: Build ZStream IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - '.github/workflows/ios-build.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build unsigned IPA
+    runs-on: macos-15
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install npm dependencies
+        working-directory: app
+        run: npm ci
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.4.app || true
+
+      - name: Install CocoaPods
+        run: gem install cocoapods
+
+      - name: Install CocoaPods dependencies
+        working-directory: app/ios
+        run: pod install --repo-update
+
+      - name: Build app (no signing)
+        working-directory: app/ios
+        run: |
+          xcodebuild \
+            -workspace ZStream.xcworkspace \
+            -scheme ZStream \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            build
+
+      - name: Package IPA (ad-hoc signed)
+        run: |
+          APP_PATH=$(find app/ios/build/Build/Products/Release-iphoneos -maxdepth 1 -name "*.app" | head -1)
+          if [ -z "$APP_PATH" ]; then
+            echo "::error::App bundle not found in build output"
+            exit 1
+          fi
+          mkdir -p dist/Payload
+          cp -R "$APP_PATH" dist/Payload/
+          codesign --force --deep --sign - dist/Payload/ZStream.app
+          (cd dist && zip -qr ../ZStream.ipa Payload)
+          ls -lh ZStream.ipa
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZStream-ipa
+          path: ZStream.ipa
+          if-no-files-found: error
+
+      - name: Create draft release
+        if: github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: ZStream build ${{ github.run_number }}
+          files: ZStream.ipa
+          draft: true

@@ -1,46 +1,27 @@
 /**
  * ThemedText - A Text component that uses theme colors and typography.
- * Provides consistent text styling throughout the app.
+ * Apple-native text styling following iOS HIG.
  */
 import React, { type ReactNode } from 'react';
-import { Text, StyleSheet, type TextStyle, type TextProps } from 'react-native';
+import { Text, StyleSheet, type TextStyle, type TextProps, Platform } from 'react-native';
 import { useTheme } from '../theme/ThemeProvider';
 
-type TextVariant = 'h1' | 'h2' | 'body' | 'small';
+type TextVariant =
+  | 'largeTitle' | 'title1' | 'title2' | 'title3'
+  | 'headline' | 'body' | 'callout' | 'subheadline'
+  | 'footnote' | 'caption1' | 'caption2'
+  | 'small' | 'h1' | 'h2';
+
 type TextColor = 'primary' | 'secondary' | 'muted' | 'accent' | 'error' | 'success';
 
 interface ThemedTextProps extends TextProps {
-  /** Text content */
   children: ReactNode;
-  /** Typography variant (defaults to 'body') */
   variant?: TextVariant;
-  /** Text color variant (defaults to 'primary') */
   color?: TextColor;
-  /** Additional style overrides */
   style?: TextStyle;
 }
 
-/**
- * ThemedText component.
- * Automatically applies theme typography and colors.
- *
- * @example
- * ```tsx
- * // Heading
- * <ThemedText variant="h1">Welcome to PStream</ThemedText>
- *
- * // Secondary text
- * <ThemedText variant="body" color="secondary">
- *   Browse your favorite content
- * </ThemedText>
- *
- * // Small muted text
- * <ThemedText variant="small" color="muted">
- *   Last updated: 2 hours ago
- * </ThemedText>
- * ```
- */
-export const ThemedText: React.FC<ThemedTextProps> = ({
+const ThemedText: React.FC<ThemedTextProps> = ({
   children,
   variant = 'body',
   color = 'primary',
@@ -59,25 +40,75 @@ export const ThemedText: React.FC<ThemedTextProps> = ({
   };
 
   const variantStyles: Record<TextVariant, TextStyle> = {
-    h1: {
-      fontSize: typography.fontSize.h1,
-      lineHeight: typography.lineHeight.h1,
-      fontWeight: 'bold',
+    largeTitle: {
+      fontSize: typography.fontSize.largeTitle,
+      lineHeight: typography.lineHeight.largeTitle,
+      fontWeight: '300',
     },
-    h2: {
-      fontSize: typography.fontSize.h2,
-      lineHeight: typography.lineHeight.h2,
+    title1: {
+      fontSize: typography.fontSize.title1,
+      lineHeight: typography.lineHeight.title1,
+      fontWeight: '400',
+    },
+    title2: {
+      fontSize: typography.fontSize.title2,
+      lineHeight: typography.lineHeight.title2,
+      fontWeight: '400',
+    },
+    title3: {
+      fontSize: typography.fontSize.title3,
+      lineHeight: typography.lineHeight.title3,
+      fontWeight: '400',
+    },
+    headline: {
+      fontSize: typography.fontSize.headline,
+      lineHeight: typography.lineHeight.headline,
       fontWeight: '600',
     },
     body: {
       fontSize: typography.fontSize.body,
       lineHeight: typography.lineHeight.body,
-      fontWeight: 'normal',
+      fontWeight: '400',
+    },
+    callout: {
+      fontSize: typography.fontSize.callout,
+      lineHeight: typography.lineHeight.callout,
+      fontWeight: '400',
+    },
+    subheadline: {
+      fontSize: typography.fontSize.subheadline,
+      lineHeight: typography.lineHeight.subheadline,
+      fontWeight: '400',
+    },
+    footnote: {
+      fontSize: typography.fontSize.footnote,
+      lineHeight: typography.lineHeight.footnote,
+      fontWeight: '400',
+    },
+    caption1: {
+      fontSize: typography.fontSize.caption1,
+      lineHeight: typography.lineHeight.caption1,
+      fontWeight: '400',
+    },
+    caption2: {
+      fontSize: typography.fontSize.caption2,
+      lineHeight: typography.lineHeight.caption2,
+      fontWeight: '400',
     },
     small: {
       fontSize: typography.fontSize.small,
       lineHeight: typography.lineHeight.small,
-      fontWeight: 'normal',
+      fontWeight: '400',
+    },
+    h1: {
+      fontSize: typography.fontSize.h1,
+      lineHeight: typography.lineHeight.h1,
+      fontWeight: '700',
+    },
+    h2: {
+      fontSize: typography.fontSize.h2,
+      lineHeight: typography.lineHeight.h2,
+      fontWeight: '600',
     },
   };
 
@@ -97,9 +128,14 @@ export const ThemedText: React.FC<ThemedTextProps> = ({
 
 const styles = StyleSheet.create({
   base: {
-    // Base text styles
+    ...Platform.select({
+      ios: {
+        fontFamily: 'System',
+      },
+      default: {},
+    }),
   },
 });
 
+export { ThemedText };
 export default ThemedText;
-

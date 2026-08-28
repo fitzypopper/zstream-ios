@@ -1,19 +1,14 @@
 /**
- * Type definitions for P-Stream API responses.
- * These types normalize the backend response structure.
+ * Type definitions for ZStream API responses.
  */
 
 /**
  * Video/audio source information
  */
 export interface Source {
-  /** Source URL */
   url: string;
-  /** Provider name (e.g., 'vidcloud', 'upcloud') */
   provider: string;
-  /** Quality label (e.g., '1080p', '720p', 'auto') */
   quality: string;
-  /** Source type (e.g., 'hls', 'mp4', 'dash') */
   type: 'hls' | 'mp4' | 'dash' | 'unknown';
 }
 
@@ -21,38 +16,31 @@ export interface Source {
  * Media item (movie, TV show, episode, etc.)
  */
 export interface MediaItem {
-  /** Unique identifier */
   id: string;
-  /** TMDB ID if available */
   tmdbId?: string;
-  /** Media title */
   title: string;
-  /** Poster image URL */
   poster: string | null;
-  /** Backdrop image URL */
   backdrop?: string | null;
-  /** Overview/description */
   overview: string;
-  /** Media type */
   type: 'movie' | 'tv' | 'episode' | 'unknown';
-  /** Release year */
   year?: number;
-  /** Rating (0-10) */
   rating?: number;
-  /** Normalized playback progress between 0-1 */
   progress?: number;
-  /** Total runtime in seconds (if known) */
   runtimeSeconds?: number;
-  /** Watched seconds (if known) */
   watchedSeconds?: number;
-  /** Available sources (populated when fetching details) */
   sources?: Source[];
-  /** Season number (for episodes) */
   season?: number;
-  /** Episode number (for episodes) */
   episode?: number;
-  /** Genres */
   genres?: string[];
+  // ZStream-specific fields
+  mediaType?: string;
+  releaseDate?: string;
+  voteAverage?: number;
+  voteCount?: number;
+  popularity?: number;
+  originalLanguage?: string;
+  adult?: boolean;
+  video?: boolean;
 }
 
 /**
@@ -81,11 +69,16 @@ export interface SearchResponse {
  */
 export interface SourcesResponse {
   sources: Source[];
-  subtitles?: {
-    url: string;
-    language: string;
-    label: string;
-  }[];
+  subtitles?: Subtitle[];
+}
+
+/**
+ * Subtitle information
+ */
+export interface Subtitle {
+  url: string;
+  language: string;
+  label: string;
 }
 
 /**
@@ -97,3 +90,151 @@ export interface BackendErrorResponse {
   status?: number;
 }
 
+/**
+ * User profile from ZStream backend
+ */
+export interface UserProfile {
+  id: string;
+  userId?: string;
+  token?: string;
+  nickname?: string;
+  deviceName?: string;
+  usesPasskey?: boolean;
+  lastActiveAt?: string;
+  kidsModeEnabled?: boolean;
+}
+
+/**
+ * Auth login start response
+ */
+export interface AuthLoginStartResponse {
+  sessionId: string;
+  codeLength?: number;
+  salt?: string;
+}
+
+/**
+ * Auth login complete response
+ */
+export interface AuthLoginCompleteResponse {
+  token: string;
+  userId: string;
+  profile?: UserProfile;
+}
+
+/**
+ * Bookmark item
+ */
+export interface Bookmark {
+  tmdbId: string;
+  type: 'movie' | 'tv';
+  title?: string;
+  posterPath?: string;
+  addedAt?: string;
+}
+
+/**
+ * Progress item
+ */
+export interface ProgressItem {
+  tmdbId: string;
+  type: 'movie' | 'tv';
+  seasonNumber?: number;
+  episodeNumber?: number;
+  progress: number;
+  duration: number;
+  updatedAt?: string;
+}
+
+/**
+ * Watch history item
+ */
+export interface WatchHistoryItem {
+  tmdbId: string;
+  type: 'movie' | 'tv';
+  title?: string;
+  posterPath?: string;
+  watchedAt?: string;
+  progress?: number;
+}
+
+/**
+ * Paired TV device
+ */
+export interface PairedTV {
+  id: string;
+  tvDeviceId: string;
+  tvName: string;
+  nickname?: string;
+  host: string;
+  port: number;
+  token: string;
+  secretBase64: string;
+  pairedAt: string;
+  releaseOwnerId?: string;
+  releaseOwnerName?: string;
+}
+
+/**
+ * TV Sync pairing session
+ */
+export interface TVPairingSession {
+  sessionId: string;
+  tvName: string;
+  tvDeviceId: string;
+  salt: string;
+  codeLength: number;
+  port: number;
+  ips: string[];
+}
+
+/**
+ * TV Sync transfer payload
+ */
+export interface TVSyncPayload {
+  tvName: string;
+  tmdbApiKey?: string;
+  debridToken?: string;
+  debridService?: string;
+  passphrase?: string;
+  accountDeviceName?: string;
+  passkeySession?: string;
+  traktSession?: string;
+}
+
+/**
+ * TV Cast request
+ */
+export interface TVCastRequest {
+  requestId: string;
+  issuedAt: string;
+  tmdbId: string;
+  mediaType: 'movie' | 'tv';
+  title: string;
+  posterPath?: string;
+  seasonNumber?: number;
+  episodeNumber?: number;
+  episodeTitle?: string;
+}
+
+/**
+ * Settings from ZStream backend
+ */
+export interface UserSettings {
+  id?: string;
+  userId?: string;
+  defaultDebridService?: string;
+  debridToken?: string;
+  debridService?: string;
+  febboxKey?: string;
+  febboxKeys?: string[];
+  tmdbApiKey?: string;
+  tidbKey?: string;
+  wyzieKey?: string;
+  sourceOrder?: string[];
+  autoPlay?: boolean;
+  skipCredits?: boolean;
+  kidsMode?: boolean;
+  theme?: string;
+  [key: string]: unknown;
+}
