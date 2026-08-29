@@ -92,6 +92,7 @@ jobs:
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
+            OTHER_LDFLAGS="$(inherited) -framework WebKit" \
             build
 
       - name: Package IPA (ad-hoc signed)

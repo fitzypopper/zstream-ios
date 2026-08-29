@@ -22,11 +22,6 @@ target 'ZStream' do
     :app_path => "#{Pod::Config.instance.installation_root}/.."
   )
 
-  # Add WebKit framework to app target for WKWebView
-  user_target_xcconfig(
-    'OTHER_LDFLAGS' => '$(inherited) -framework WebKit'
-  )
-
   post_install do |installer|
     react_native_post_install(
       installer,
