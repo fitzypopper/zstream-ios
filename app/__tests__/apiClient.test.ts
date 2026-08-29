@@ -5,7 +5,7 @@
 
 import axios from 'axios';
 import { createApiClient, getBaseApiUrl } from '../api/client';
-import { BASE_API_URL, CLIENT_IDENTIFIER } from '../config/defaults';
+import { BASE_API_URL } from '../config/defaults';
 
 // Mock config/env
 jest.mock('../config/env', () => ({
@@ -50,6 +50,15 @@ describe('API Client', () => {
       const client = createApiClient();
       expect(mockedCreate).toHaveBeenCalledTimes(1);
       expect(client).toBeDefined();
+    });
+
+    it('should always send a User-Agent header (backend requires it)', () => {
+      createApiClient();
+      const config = (mockedCreate as unknown as jest.Mock<
+        unknown,
+        Array<{ headers?: Record<string, string> }>
+      >).mock.calls[0]?.[0];
+      expect(config?.headers?.['User-Agent']).toBe('ZStream-iOS/1.4.2 (CFNetwork)');
     });
   });
 });

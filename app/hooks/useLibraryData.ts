@@ -12,7 +12,6 @@ import {
   deleteProgress,
 } from '../api/auth';
 import type { Bookmark, ProgressItem, WatchHistoryItem } from '../api/types';
-import { fetchDetails } from '../api/pstream';
 
 export type LibraryTab = 'bookmarks' | 'progress' | 'history';
 
@@ -27,57 +26,12 @@ export interface LibraryEntry {
   detail: Bookmark | ProgressItem | WatchHistoryItem | null;
 }
 
-function buildSubtitle(raw: Record<string, unknown>): string {
-  const year = raw.release_date ?? raw.first_air_date;
-  const typeLabel = String(raw.media_type ?? raw.type ?? '').toUpperCase();
+function buildSubtitle(meta?: { type?: string; year?: number; title?: string }): string {
+  const typeLabel = (meta?.type ?? '').toUpperCase();
   const parts: string[] = [];
   if (typeLabel) parts.push(typeLabel);
-  if (typeof year === 'string' && year.length >= 4) parts.push(year.slice(0, 4));
-  if (typeof raw.vote_average === 'number') parts.push(`★ ${raw.vote_average.toFixed(1)}`);
+  if (meta?.year) parts.push(String(meta.year));
   return parts.join(' • ');
-}
-
-/**
- * Enrich a library item with TMDB metadata (title, poster, year).
- * Falls back gracefully when TMDB is unreachable.
- */
-async function enrichItem(
-  tmdbId: string,
-  type: 'movie' | 'tv',
-  subtitle?: string,
-  progress = 0,
-): Promise<LibraryEntry> {
-  try {
-    const media = await fetchDetails(tmdbId);
-    const posterPath = media.poster;
-    const poster = posterPath
-      ? posterPath.startsWith('http')
-        ? posterPath
-        : `https://image.tmdb.org/t/p/w500${posterPath}`
-      : null;
-
-    return {
-      key: `${type}-${tmdbId}`,
-      tmdbId,
-      type,
-      title: media.title || `Title ${tmdbId}`,
-      poster,
-      subtitle: subtitle ?? buildSubtitle(media as unknown as Record<string, unknown>),
-      progress,
-      detail: null,
-    };
-  } catch {
-    return {
-      key: `${type}-${tmdbId}`,
-      tmdbId,
-      type,
-      title: `Title ${tmdbId}`,
-      poster: null,
-      subtitle: subtitle ?? type === 'movie' ? 'Movie' : 'TV Show',
-      progress,
-      detail: null,
-    };
-  }
 }
 
 /**
@@ -117,27 +71,45 @@ export function useLibraryData() {
           getWatchHistory(userId).catch(() => []),
         ]);
 
-        const bookmarkEntries = await Promise.all(
-          (bookmarksRes.items || []).map((b) =>
-            enrichItem(b.tmdbId, b.type, undefined, 0),
-          ),
+        const fromMeta = (
+          tmdbId: string,
+          meta: { type: string; title: string; poster?: string | null } | undefined,
+          subtitle: string,
+          progress: number,
+        ): LibraryEntry => {
+          const type = meta?.type === 'show' ? 'tv' : meta?.type === 'movie' ? 'movie' : 'movie';
+          const poster = meta?.poster
+            ? meta.poster.startsWith('http')
+              ? meta.poster
+              : `https://image.tmdb.org/t/p/w500${meta.poster}`
+            : null;
+          return {
+            key: `${type}-${tmdbId}`,
+            tmdbId,
+            type,
+            title: meta?.title || `Title ${tmdbId}`,
+            poster,
+            subtitle,
+            progress,
+            detail: null,
+          };
+        };
+
+        const bookmarkEntries = (bookmarksRes.items || []).map((b) =>
+          fromMeta(b.tmdbId, b.meta, buildSubtitle(b.meta), 0),
         );
-        const progressEntries = await Promise.all(
-          (progressRes.items || []).map((p) =>
-            enrichItem(
-              p.tmdbId,
-              p.type,
-              p.type === 'tv' && p.episodeNumber
-                ? `S${p.seasonNumber ?? 1} E${p.episodeNumber}`
-                : undefined,
-              p.progress,
-            ),
-          ),
-        );
-        const historyEntries = await Promise.all(
-          (historyRes || []).map((h) =>
-            enrichItem(h.tmdbId, h.type, undefined, h.progress ?? 0),
-          ),
+        const progressEntries = (progressRes.items || []).map((p) => {
+          const isShow = p.meta?.type === 'show';
+          const subtitle = isShow
+            ? `S${p.season?.number ?? 1} E${p.episode?.number ?? 1}`
+            : buildSubtitle(p.meta);
+          const progress = typeof p.watched === 'number'
+            ? p.watched
+            : parseFloat(String(p.watched ?? 0)) || 0;
+          return fromMeta(p.tmdbId, p.meta, subtitle, progress);
+        });
+        const historyEntries = (historyRes || []).map((h) =>
+          fromMeta(h.tmdbId, h.meta, buildSubtitle(h.meta), 0),
         );
 
         if (!cancelled) {

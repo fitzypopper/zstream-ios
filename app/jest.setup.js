@@ -61,3 +61,69 @@ jest.mock('react-native-mmkv', () => {
   };
 });
 
+// Mock @dr.pogodin/react-native-fs with an in-memory filesystem so tests can
+// exercise the download/subtitle caching layers without native modules.
+jest.mock('@dr.pogodin/react-native-fs', () => {
+  const memoryFs = new Map(); // path -> { content, dir }
+
+  const isDir = (path) => {
+    const entry = memoryFs.get(path);
+    return !!(entry && entry.dir);
+  };
+
+  const has = (path) => memoryFs.has(path);
+
+  return {
+    DocumentDirectoryPath: '/Documents',
+    exists: jest.fn(async (path) => has(path)),
+    mkdir: jest.fn(async (path) => {
+      memoryFs.set(path, { dir: true });
+    }),
+    readdir: jest.fn(async (path) => {
+      if (!has(path)) throw new Error(`ENOENT: ${path}`);
+      const prefix = `${path}/`;
+      return [...memoryFs.keys()]
+        .filter((p) => p.startsWith(prefix))
+        .map((p) => p.slice(prefix.length));
+    }),
+    writeFile: jest.fn(async (path, content) => {
+      memoryFs.set(path, { content: String(content) });
+    }),
+    readFile: jest.fn(async (path, opts) => {
+      const entry = memoryFs.get(path);
+      if (!entry || entry.dir) throw new Error(`ENOENT: ${path}`);
+      return String(entry.content);
+    }),
+    moveFile: jest.fn(async (fromPath, toPath) => {
+      const entry = memoryFs.get(fromPath);
+      if (!entry) throw new Error(`ENOENT: ${fromPath}`);
+      memoryFs.delete(fromPath);
+      memoryFs.set(toPath, entry);
+    }),
+    unlink: jest.fn(async (path) => {
+      if (isDir(path)) {
+        const prefix = `${path}/`;
+        for (const key of [...memoryFs.keys()]) {
+          if (key === path || key.startsWith(prefix)) memoryFs.delete(key);
+        }
+      } else {
+        memoryFs.delete(path);
+      }
+    }),
+    stat: jest.fn(async (path) => {
+      const entry = memoryFs.get(path);
+      if (!entry) throw new Error(`ENOENT: ${path}`);
+      return { size: entry.dir ? 0 : String(entry.content).length, isFile: () => !entry.dir };
+    }),
+    downloadFile: jest.fn(() => {
+      const jobId = Date.now().toString(36);
+      return {
+        jobId,
+        promise: Promise.resolve({ statusCode: 200, bytesWritten: 0 }),
+      };
+    }),
+    stopDownload: jest.fn(),
+    resumeDownload: jest.fn(),
+  };
+});
+

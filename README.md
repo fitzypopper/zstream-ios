@@ -1,6 +1,3 @@
-# **⚠️ build is broken do not download ⚠️** #
-
-
 # ZStream
 
 Open-source iOS client for ZStream (formerly P-Stream), built with React Native (TypeScript) and tuned for a native Apple feel.

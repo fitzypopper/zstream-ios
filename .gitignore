@@ -140,3 +140,7 @@ vite.config.ts.timestamp-*
 
 # Backup files
 *.bak
+
+# Local secrets (never commit)
+.secrets.ignore
+/tmp/harness/

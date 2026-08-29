@@ -16,7 +16,7 @@ import {
 import { useTheme } from '../theme/ThemeProvider';
 import { ThemedView } from '../components/ThemedView';
 import { ThemedText } from '../components/ThemedText';
-import { loginWithPassword } from '../api/auth';
+import { loginWithPassword, registerWithPassword } from '../api/auth';
 import { setAuthToken, setUserProfile, setUserId, notifyAuthChanged } from '../config/env';
 
 interface LoginScreenProps {
@@ -25,15 +25,45 @@ interface LoginScreenProps {
 
 const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
   const { colors, radii } = useTheme();
+  const [mode, setMode] = useState<'login' | 'register'>('login');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleLogin = async () => {
+  const isRegister = mode === 'register';
+
+  const persistSession = async (response: {
+    token: string;
+    session?: { user?: string };
+    user?: { id: string; nickname?: string; profile?: unknown };
+  }) => {
+    await setAuthToken(response.token);
+    const userId = response.session?.user;
+    if (userId) {
+      await setUserId(userId);
+    }
+    if (response.user) {
+      await setUserProfile(
+        JSON.stringify({
+          id: response.user.id,
+          userId,
+          nickname: response.user.nickname,
+          profile: response.user.profile,
+        }),
+      );
+    }
+    notifyAuthChanged();
+  };
+
+  const handleSubmit = async () => {
     const trimmedUsername = username.trim();
     if (!trimmedUsername || !password) {
       setError('Please enter your username and password');
+      return;
+    }
+    if (isRegister && password.length < 8) {
+      setError('Password must be at least 8 characters');
       return;
     }
 
@@ -41,30 +71,21 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
     setError(null);
 
     try {
-      const response = await loginWithPassword(trimmedUsername, password);
-      await setAuthToken(response.token);
-      const userId = response.session?.userId;
-      if (userId) {
-        await setUserId(userId);
-      }
-      if (response.user) {
-        await setUserProfile(
-          JSON.stringify({
-            id: response.user.id,
-            userId,
-            nickname: response.user.nickname,
-            profile: response.user.profile,
-          }),
-        );
-      }
-      notifyAuthChanged();
+      const response = isRegister
+        ? await registerWithPassword(trimmedUsername, password)
+        : await loginWithPassword(trimmedUsername, password);
+      await persistSession(response);
       if (onLoginSuccess) {
         onLoginSuccess();
       }
       // Navigation will automatically switch to Main screen
       // because RootNavigator checks authentication state
     } catch (err: any) {
-      setError(err.message || 'Login failed. Please check your username and password.');
+      setError(
+        isRegister
+          ? err.message || 'Registration failed. Try a different username.'
+          : err.message || 'Login failed. Please check your username and password.',
+      );
     } finally {
       setIsLoading(false);
     }
@@ -89,7 +110,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
               ZStream
             </ThemedText>
             <ThemedText variant="body" color="secondary" style={styles.tagline}>
-              Your movies, your way
+              {isRegister ? 'Create your account' : 'Your movies, your way'}
             </ThemedText>
           </View>
 
@@ -148,7 +169,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                 autoCorrect={false}
                 secureTextEntry
                 returnKeyType="go"
-                onSubmitEditing={handleLogin}
+                onSubmitEditing={handleSubmit}
               />
               {error && (
                 <ThemedText variant="small" color="error" style={styles.errorText}>
@@ -163,14 +184,14 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                 styles.loginButton,
                 { backgroundColor: colors.PRIMARY, borderRadius: radii.md },
               ]}
-              onPress={handleLogin}
+              onPress={handleSubmit}
               disabled={isLoading}
               activeOpacity={0.8}>
               {isLoading ? (
                 <ActivityIndicator color={colors.TEXT_PRIMARY} size="small" />
               ) : (
                 <ThemedText variant="body" style={styles.loginButtonText}>
-                  Sign In
+                  {isRegister ? 'Create Account' : 'Sign In'}
                 </ThemedText>
               )}
             </TouchableOpacity>
@@ -178,12 +199,33 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 
           {/* Footer */}
           <View style={styles.footer}>
+            {isRegister ? (
+            <ThemedText variant="small" color="muted" style={styles.footerText}>
+              Already have an account?{' '}
+              <ThemedText
+                variant="small"
+                color="accent"
+                onPress={() => {
+                  setMode('login');
+                  setError(null);
+                }}>
+                Sign In
+              </ThemedText>
+            </ThemedText>
+          ) : (
             <ThemedText variant="small" color="muted" style={styles.footerText}>
               Don't have an account?{' '}
-              <ThemedText variant="small" color="accent">
+              <ThemedText
+                variant="small"
+                color="accent"
+                onPress={() => {
+                  setMode('register');
+                  setError(null);
+                }}>
                 Sign Up
               </ThemedText>
             </ThemedText>
+          )}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

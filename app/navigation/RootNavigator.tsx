@@ -15,6 +15,7 @@ import LatestTvScreen from '../screens/LatestTvScreen';
 import SearchScreen from '../screens/SearchScreen';
 import LibraryScreen from '../screens/LibraryScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import DownloadsScreen from '../screens/DownloadsScreen';
 import TraktScreen from '../screens/TraktScreen';
 import TVSyncScreen from '../screens/TVSyncScreen';
 import DetailsScreen from '../screens/DetailsScreen';
@@ -212,6 +213,14 @@ const RootNavigator = () => {
               component={SettingsScreen}
               options={{
                 headerTitle: 'Settings',
+                headerLargeTitle: true,
+              }}
+            />
+            <Stack.Screen
+              name="Downloads"
+              component={DownloadsScreen}
+              options={{
+                headerTitle: 'Downloads',
                 headerLargeTitle: true,
               }}
             />

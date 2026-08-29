@@ -6,8 +6,16 @@ export type RootStackParamList = {
   Login: undefined;
   Main: undefined;
   Details: { id: string } | undefined;
-  Player: { tmdbId: string; type: 'movie' | 'tv'; title?: string; poster?: string };
+  Player: {
+    tmdbId: string;
+    type: 'movie' | 'tv';
+    title?: string;
+    poster?: string;
+    season?: number;
+    episode?: number;
+  };
   Settings: undefined;
+  Downloads: undefined;
   TVSync: undefined;
   Trakt: undefined;
 };

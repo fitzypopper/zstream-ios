@@ -1,245 +1,432 @@
 /**
  * SettingsScreen - ZStream settings with Apple-native iOS styling.
- * Uses grouped list style like iOS Settings app.
+ * Settings are loaded from and persisted to the ZStream backend.
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Switch,
   Alert,
 } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeProvider';
 import { ThemedView } from '../components/ThemedView';
 import { ThemedText } from '../components/ThemedText';
+import {
+  SettingItem,
+  Separator,
+  SwitchRow,
+  ChoiceRow,
+  KeyRow,
+  type Option,
+} from '../components/settings/SettingsRows';
 import { clearUserData, notifyAuthChanged } from '../config/env';
 import { getTVSyncManager } from '../services/tvSync';
 import { RootStackParamList } from '../navigation/types';
+import { useSettingsActions } from '../hooks/useUserSettings';
+import {
+  THEME_OPTIONS,
+  FONT_OPTIONS,
+  VIDEO_SCALE_OPTIONS,
+  PLAYBACK_SPEED_OPTIONS,
+  GRID_ROWS_OPTIONS,
+  SUBTITLE_LANGUAGE_OPTIONS,
+  KEY_SETTINGS,
+} from '../services/settings';
+import type { UserSettings } from '../api/types';
 
-interface SettingItemProps {
-  title: string;
-  subtitle?: string;
-  rightElement?: React.ReactNode;
-  onPress?: () => void;
-  showDisclosure?: boolean;
+function labelize(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
-const SettingItem: React.FC<SettingItemProps> = ({
-  title,
-  subtitle,
-  rightElement,
-  onPress,
-  showDisclosure = true,
-}) => {
-  return (
-    <TouchableOpacity
-      style={[styles.settingItem, { paddingVertical: 12, paddingHorizontal: 16 }]}
-      onPress={onPress}
-      activeOpacity={onPress ? 0.6 : 1}
-      disabled={!onPress}>
-      <View style={styles.settingInfo}>
-        <ThemedText variant="body">{title}</ThemedText>
-        {subtitle && (
-          <ThemedText variant="footnote" color="secondary">
-            {subtitle}
-          </ThemedText>
-        )}
-      </View>
-      <View style={styles.settingRight}>
-        {rightElement}
-        {showDisclosure && onPress && (
-          <ThemedText variant="body" color="muted" style={styles.disclosure}>
-            ›
-          </ThemedText>
-        )}
-      </View>
-    </TouchableOpacity>
-  );
-};
-
 const SettingsScreen: React.FC = () => {
-  const { colors, radii } = useTheme();
+  const { colors, radii, spacing } = useTheme();
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
-  const [autoPlay, setAutoPlay] = useState(true);
-  const [skipCredits, setSkipCredits] = useState(true);
+  const { settings, isLoading, update } = useSettingsActions();
   const [pairedDeviceCount, setPairedDeviceCount] = useState(0);
 
-  useEffect(() => {
+  React.useEffect(() => {
     getTVSyncManager()
       .getPairedTVs()
       .then((tvs) => setPairedDeviceCount(tvs.length))
       .catch(() => {});
   }, []);
 
+  const setSetting = (patch: Partial<UserSettings>) => update(patch);
+
   const handleSignOut = () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Sign Out',
-          style: 'destructive',
-          onPress: async () => {
-            await clearUserData();
-            notifyAuthChanged();
-            // RootNavigator swaps to Login screen via auth listener
-          },
+    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Sign Out',
+        style: 'destructive',
+        onPress: async () => {
+          await clearUserData();
+          notifyAuthChanged();
         },
-      ],
-    );
+      },
+    ]);
   };
+
+  if (isLoading) {
+    return (
+      <ThemedView variant="background" style={styles.container}>
+        <ThemedText style={{ textAlign: 'center', marginTop: 120 }} color="secondary">
+          Loading settings…
+        </ThemedText>
+      </ThemedView>
+    );
+  }
 
   return (
     <ThemedView variant="background" style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
-        {/* Account Section */}
-        <View style={styles.section}>
-          <ThemedText variant="footnote" color="secondary" style={styles.sectionHeader}>
-            ACCOUNT
-          </ThemedText>
-          <View style={[styles.sectionContent, { backgroundColor: colors.SURFACE, borderRadius: radii.md }]}>
-            <SettingItem
-              title="Profile"
-              subtitle="Manage your account"
-              onPress={() => {}}
-            />
-            <View style={[styles.separator, { backgroundColor: colors.SEPARATOR }]} />
-            <SettingItem
-              title="Subscription"
-              subtitle="Premium • Active"
-              rightElement={
-                <View style={[styles.badge, { backgroundColor: colors.SUCCESS }]}>
-                  <ThemedText variant="caption2" style={styles.badgeText}>Active</ThemedText>
-                </View>
-              }
-              onPress={() => {}}
-            />
-          </View>
-        </View>
-
-        {/* Playback Section */}
-        <View style={styles.section}>
-          <ThemedText variant="footnote" color="secondary" style={styles.sectionHeader}>
-            PLAYBACK
-          </ThemedText>
-          <View style={[styles.sectionContent, { backgroundColor: colors.SURFACE, borderRadius: radii.md }]}>
-            <SettingItem
-              title="Auto-play next episode"
-              rightElement={
-                <Switch
-                  value={autoPlay}
-                  onValueChange={setAutoPlay}
-                  trackColor={{ false: colors.FILL, true: colors.PRIMARY }}
-                />
-              }
-              showDisclosure={false}
-            />
-            <View style={[styles.separator, { backgroundColor: colors.SEPARATOR }]} />
-            <SettingItem
-              title="Skip credits"
-              rightElement={
-                <Switch
-                  value={skipCredits}
-                  onValueChange={setSkipCredits}
-                  trackColor={{ false: colors.FILL, true: colors.PRIMARY }}
-                />
-              }
-              showDisclosure={false}
-            />
-            <View style={[styles.separator, { backgroundColor: colors.SEPARATOR }]} />
-            <SettingItem
-              title="Video Quality"
-              subtitle="Auto (recommended)"
-              onPress={() => {}}
-            />
-          </View>
-        </View>
-
-        {/* Integrations Section */}
-        <View style={styles.section}>
-          <ThemedText variant="footnote" color="secondary" style={styles.sectionHeader}>
-            INTEGRATIONS
-          </ThemedText>
-          <View style={[styles.sectionContent, { backgroundColor: colors.SURFACE, borderRadius: radii.md }]}>
-            <SettingItem
-              title="Trakt"
-              subtitle="Sync your watch history"
-              onPress={() => navigation.navigate('Trakt')}
-            />
-            <View style={[styles.separator, { backgroundColor: colors.SEPARATOR }]} />
-            <SettingItem
-              title="Debrid Service"
-              subtitle="RealDebrid"
-              onPress={() => {}}
-            />
-          </View>
-        </View>
-
-        {/* Sync Section */}
-        <View style={styles.section}>
-          <ThemedText variant="footnote" color="secondary" style={styles.sectionHeader}>
-            SYNC
-          </ThemedText>
-          <View style={[styles.sectionContent, { backgroundColor: colors.SURFACE, borderRadius: radii.md }]}>
-            <SettingItem
-              title="Pair with TV"
-              subtitle="Sync content to your TV"
-              onPress={() => navigation.navigate('TVSync')}
-            />
-            <View style={[styles.separator, { backgroundColor: colors.SEPARATOR }]} />
-            <SettingItem
-              title="Paired Devices"
-              subtitle={`${pairedDeviceCount} device${pairedDeviceCount === 1 ? '' : 's'}`}
-              onPress={() => navigation.navigate('TVSync')}
-            />
-          </View>
-        </View>
-
-        {/* About Section */}
-        <View style={styles.section}>
-          <ThemedText variant="footnote" color="secondary" style={styles.sectionHeader}>
-            ABOUT
-          </ThemedText>
-          <View style={[styles.sectionContent, { backgroundColor: colors.SURFACE, borderRadius: radii.md }]}>
-            <SettingItem
-              title="Version"
-              subtitle="1.0.0 (Build 1)"
-              showDisclosure={false}
-            />
-            <View style={[styles.separator, { backgroundColor: colors.SEPARATOR }]} />
-            <SettingItem
-              title="Terms of Service"
-              onPress={() => {}}
-            />
-            <View style={[styles.separator, { backgroundColor: colors.SEPARATOR }]} />
-            <SettingItem
-              title="Privacy Policy"
-              onPress={() => {}}
-            />
-          </View>
-        </View>
-
-        {/* Sign Out Button */}
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <SettingsSections
+          settings={settings}
+          setSetting={setSetting}
+          pairedDeviceCount={pairedDeviceCount}
+          onNavigate={navigation.navigate as never}
+          colors={colors}
+          radii={radii}
+        />
         <TouchableOpacity
-          style={[styles.signOutButton, { backgroundColor: colors.SURFACE, borderRadius: radii.md }]}
+          style={[styles.signOutButton, { backgroundColor: colors.SURFACE, borderRadius: radii.md, marginTop: spacing.lg }]}
           onPress={handleSignOut}
           activeOpacity={0.8}>
           <ThemedText variant="body" color="error" style={styles.signOutText}>
             Sign Out
           </ThemedText>
         </TouchableOpacity>
-
         <View style={{ height: 100 }} />
       </ScrollView>
     </ThemedView>
   );
 };
+
+interface SectionProps {
+  settings: UserSettings;
+  setSetting: (patch: Partial<UserSettings>) => void;
+  pairedDeviceCount: number;
+  onNavigate: (screen: keyof RootStackParamList, params?: unknown) => void;
+  colors: Record<string, string>;
+  radii: Record<string, number>;
+}
+
+const SettingsSections: React.FC<SectionProps> = ({
+  settings: s,
+  setSetting: u,
+  pairedDeviceCount,
+  onNavigate,
+  colors,
+  radii,
+}) => {
+  return (
+    <>
+      <SectionHeader>ACCOUNT</SectionHeader>
+      <SectionBody colors={colors} radii={radii}>
+        <SettingItem title="Profile" subtitle="Manage your account" onPress={() => {}} />
+        <Separator />
+        <SettingItem
+          title="Subscription"
+          subtitle="Premium • Active"
+          rightElement={
+            <View style={[styles.badge, { backgroundColor: colors.SUCCESS }]}>
+              <ThemedText variant="caption2" style={styles.badgeText}>
+                Active
+              </ThemedText>
+            </View>
+          }
+          onPress={() => {}}
+        />
+      </SectionBody>
+
+      <SectionHeader>APPEARANCE</SectionHeader>
+      <SectionBody colors={colors} radii={radii}>
+        <ChoiceRow
+          title="Theme"
+          value={s.applicationTheme ?? 'dark'}
+          options={asOptions(THEME_OPTIONS)}
+          onSelect={(value) => u({ applicationTheme: String(value) })}
+        />
+        <Separator />
+        <ChoiceRow
+          title="Font"
+          value={s.applicationFont ?? 'system'}
+          options={asOptions(FONT_OPTIONS)}
+          onSelect={(value) => u({ applicationFont: String(value) })}
+        />
+        <Separator />
+        <ChoiceRow
+          title="Grid Rows"
+          value={s.gridRows ?? 3}
+          options={GRID_ROWS_OPTIONS.map((value) => ({ value, label: `${value} rows` }))}
+          onSelect={(value) => u({ gridRows: Number(value) })}
+        />
+        <Separator />
+        <SwitchRow
+          title="Image Logos"
+          subtitle="Show brand logos on cards"
+          value={Boolean(s.enableImageLogos)}
+          onChange={(value) => u({ enableImageLogos: value })}
+          tint={colors.PRIMARY}
+        />
+        <Separator />
+        <SwitchRow
+          title="Minimal Cards"
+          subtitle="Compact poster tiles"
+          value={Boolean(s.enableMinimalCards)}
+          onChange={(value) => u({ enableMinimalCards: value })}
+          tint={colors.PRIMARY}
+        />
+        <Separator />
+        <SwitchRow
+          title="Carousel View"
+          value={Boolean(s.enableCarouselView)}
+          onChange={(value) => u({ enableCarouselView: value })}
+          tint={colors.PRIMARY}
+        />
+        <Separator />
+        <SwitchRow
+          title="Thumbnails"
+          subtitle="Preview images on seek bar"
+          value={Boolean(s.enableThumbnails)}
+          onChange={(value) => u({ enableThumbnails: value })}
+          tint={colors.PRIMARY}
+        />
+      </SectionBody>
+
+      <SectionHeader>PLAYBACK</SectionHeader>
+      <SectionBody colors={colors} radii={radii}>
+        <SwitchRow
+          title="Auto-play next episode"
+          value={Boolean(s.enableAutoplay)}
+          onChange={(value) => u({ enableAutoplay: value })}
+          tint={colors.PRIMARY}
+        />
+        <Separator />
+        <SwitchRow
+          title="Skip credits"
+          subtitle="Automatically skip closing credits"
+          value={Boolean(s.enableSkipCredits)}
+          onChange={(value) => u({ enableSkipCredits: value })}
+          tint={colors.PRIMARY}
+        />
+        <Separator />
+        <SwitchRow
+          title="Auto-skip segments"
+          subtitle="Skip intros, recaps and filler"
+          value={Boolean(s.enableAutoSkipSegments)}
+          onChange={(value) => u({ enableAutoSkipSegments: value })}
+          tint={colors.PRIMARY}
+        />
+        <Separator />
+        <SwitchRow
+          title="Resume on playback error"
+          value={Boolean(s.enableAutoResumeOnPlaybackError)}
+          onChange={(value) => u({ enableAutoResumeOnPlaybackError: value })}
+          tint={colors.PRIMARY}
+        />
+        <Separator />
+        <SwitchRow
+          title="Double-tap to seek"
+          value={Boolean(s.enableDoubleClickToSeek)}
+          onChange={(value) => u({ enableDoubleClickToSeek: value })}
+          tint={colors.PRIMARY}
+        />
+        <Separator />
+        <SwitchRow
+          title="Hold to boost"
+          subtitle="Press-hold for temporary 2x speed"
+          value={Boolean(s.enableHoldToBoost)}
+          onChange={(value) => u({ enableHoldToBoost: value })}
+          tint={colors.PRIMARY}
+        />
+        <Separator />
+        <SwitchRow
+          title="Number-key seeking"
+          value={Boolean(s.enableNumberKeySeeking)}
+          onChange={(value) => u({ enableNumberKeySeeking: value })}
+          tint={colors.PRIMARY}
+        />
+        <Separator />
+        <SwitchRow
+          title="Pause overlay"
+          subtitle="Show pause overlay on screen lock"
+          value={Boolean(s.enablePauseOverlay)}
+          onChange={(value) => u({ enablePauseOverlay: value })}
+          tint={colors.PRIMARY}
+        />
+        <Separator />
+        <SwitchRow
+          title="Side gestures"
+          subtitle="Brightness/volume swipe gestures"
+          value={Boolean(s.enableSideGestures)}
+          onChange={(value) => u({ enableSideGestures: value })}
+          tint={colors.PRIMARY}
+        />
+        <Separator />
+        <ChoiceRow
+          title="Default Playback Speed"
+          value={s.defaultPlaybackSpeed ?? 1}
+          options={PLAYBACK_SPEED_OPTIONS.map((value) => ({ value, label: `${value}×` }))}
+          onSelect={(value) => u({ defaultPlaybackSpeed: Number(value) })}
+        />
+        <Separator />
+        <ChoiceRow
+          title="Video Scale"
+          value={s.videoScaleMode ?? 'contain'}
+          options={asOptions(VIDEO_SCALE_OPTIONS)}
+          onSelect={(value) => u({ videoScaleMode: String(value) })}
+        />
+        <Separator />
+        <SwitchRow
+          title="Picture-in-Picture"
+          value={Boolean(s.autoPipEnabled)}
+          onChange={(value) => u({ autoPipEnabled: value })}
+          tint={colors.PRIMARY}
+        />
+        <Separator />
+        <SwitchRow
+          title="Background playback"
+          subtitle="Keep playing on screen lock"
+          value={Boolean(s.enableBackgroundPlaybackOnScreenLock)}
+          onChange={(value) => u({ enableBackgroundPlaybackOnScreenLock: value })}
+          tint={colors.PRIMARY}
+        />
+      </SectionBody>
+
+      <SectionHeader>SUBTITLES</SectionHeader>
+      <SectionBody colors={colors} radii={radii}>
+        <SwitchRow
+          title="Native subtitles"
+          subtitle="Use built-in subtitle rendering"
+          value={Boolean(s.enableNativeSubtitles)}
+          onChange={(value) => u({ enableNativeSubtitles: value })}
+          tint={colors.PRIMARY}
+        />
+        <Separator />
+        <ChoiceRow
+          title="Default Language"
+          value={s.defaultSubtitleLanguage || 'off'}
+          options={SUBTITLE_LANGUAGE_OPTIONS}
+          onSelect={(value) =>
+            u({ defaultSubtitleLanguage: value === 'off' ? '' : String(value) })
+          }
+        />
+      </SectionBody>
+
+      <SectionHeader>INTEGRATIONS</SectionHeader>
+      <SectionBody colors={colors} radii={radii}>
+        <SettingItem
+          title="Trakt"
+          subtitle="Sync your watch history"
+          onPress={() => onNavigate('Trakt')}
+        />
+        <Separator />
+        <SettingItem
+          title="Debrid Service"
+          subtitle={s.debridService || 'Not configured'}
+          onPress={() => {}}
+        />
+        {KEY_SETTINGS.map(({ key, label }, index) => (
+          <React.Fragment key={key}>
+            {index > 0 && <Separator />}
+            <KeyRow
+              label={label}
+              value={s[key] as string | undefined}
+              isSecret={
+                key === 'debridToken' ||
+                key === 'febboxKey' ||
+                key === 'tidbKey' ||
+                key === 'wyzieKey'
+              }
+              onSave={(value) => u({ [key]: value } as Partial<UserSettings>)}
+            />
+          </React.Fragment>
+        ))}
+      </SectionBody>
+
+      <SectionHeader>SOURCES</SectionHeader>
+      <SectionBody colors={colors} radii={radii}>
+        <SwitchRow
+          title="Manual source selection"
+          subtitle="Choose a source before playback"
+          value={Boolean(s.manualSourceSelection)}
+          onChange={(value) => u({ manualSourceSelection: value })}
+          tint={colors.PRIMARY}
+        />
+        <Separator />
+        <SwitchRow
+          title="Remember last source"
+          value={Boolean(s.enableLastSuccessfulSource)}
+          onChange={(value) => u({ enableLastSuccessfulSource: value })}
+          tint={colors.PRIMARY}
+        />
+        <Separator />
+        <SwitchRow
+          title="Use proxy for TMDB"
+          value={Boolean(s.proxyTmdb)}
+          onChange={(value) => u({ proxyTmdb: value })}
+          tint={colors.PRIMARY}
+        />
+      </SectionBody>
+
+      <SectionHeader>DOWNLOADS</SectionHeader>
+      <SectionBody colors={colors} radii={radii}>
+        <SettingItem
+          title="Manage Downloads"
+          subtitle="View, resume, remove offline titles"
+          onPress={() => onNavigate('Downloads')}
+        />
+      </SectionBody>
+
+      <SectionHeader>SYNC</SectionHeader>
+      <SectionBody colors={colors} radii={radii}>
+        <SettingItem
+          title="Pair with TV"
+          subtitle="Sync content to your TV"
+          onPress={() => onNavigate('TVSync')}
+        />
+        <Separator />
+        <SettingItem
+          title="Paired Devices"
+          subtitle={`${pairedDeviceCount} device${pairedDeviceCount === 1 ? '' : 's'}`}
+          onPress={() => onNavigate('TVSync')}
+        />
+      </SectionBody>
+
+      <SectionHeader>ABOUT</SectionHeader>
+      <SectionBody colors={colors} radii={radii}>
+        <SettingItem title="Version" subtitle="1.0.0 (Build 1)" showDisclosure={false} />
+        <Separator />
+        <SettingItem title="Terms of Service" onPress={() => {}} />
+        <Separator />
+        <SettingItem title="Privacy Policy" onPress={() => {}} />
+      </SectionBody>
+    </>
+  );
+};
+
+const asOptions = (values: readonly string[] | readonly number[]): Option[] =>
+  values.map((value) => ({ value, label: labelize(String(value)) }));
+
+const SectionHeader: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <ThemedText variant="footnote" color="secondary" style={styles.sectionHeader}>
+    {children}
+  </ThemedText>
+);
+
+const SectionBody: React.FC<{ colors: Record<string, string>; radii: Record<string, number>; children: React.ReactNode }> = ({
+  colors,
+  radii,
+  children,
+}) => (
+  <View style={[styles.sectionContent, { backgroundColor: colors.SURFACE, borderRadius: radii.md }]}>
+    {children}
+  </View>
+);
 
 const styles = StyleSheet.create({
   container: {
@@ -249,37 +436,15 @@ const styles = StyleSheet.create({
     paddingTop: 100,
     paddingHorizontal: 16,
   },
-  section: {
-    marginBottom: 24,
-  },
   sectionHeader: {
     marginLeft: 16,
     marginBottom: 8,
+    marginTop: 24,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   sectionContent: {
     overflow: 'hidden',
-  },
-  settingItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  settingInfo: {
-    flex: 1,
-    marginRight: 16,
-  },
-  settingRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  disclosure: {
-    marginLeft: 4,
-  },
-  separator: {
-    height: StyleSheet.hairlineWidth,
-    marginLeft: 16,
   },
   badge: {
     paddingHorizontal: 8,

@@ -49,6 +49,10 @@ export function createApiClient(): AxiosInstance {
     headers: {
       'Content-Type': 'application/json',
       Accept: 'application/json',
+      // Required: the ZStream backend rejects requests without a User-Agent
+      // (returns 500/403). OkHttp always sends one, which is why the Android
+      // app works; we must send one explicitly here.
+      'User-Agent': 'ZStream-iOS/1.4.2 (CFNetwork)',
     },
     maxRedirects: 5,
     validateStatus: (status) => status >= 200 && status < 400,

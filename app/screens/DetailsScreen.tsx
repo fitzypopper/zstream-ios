@@ -64,7 +64,10 @@ const DetailsScreen: React.FC = () => {
         await removeBookmark(userId, item.tmdbId);
         setIsBookmarked(false);
       } else {
-        await addBookmark(userId, item.tmdbId);
+        await addBookmark(userId, item.tmdbId, {
+          title: item.title || 'Untitled',
+          type: item.type === 'tv' ? 'show' : 'movie',
+        });
         setIsBookmarked(true);
       }
     } catch (err) {
