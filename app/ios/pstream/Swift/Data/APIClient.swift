@@ -35,11 +35,21 @@ struct APIClient {
     private let userAgent = "ZStream-iOS/1.4.2 (CFNetwork)"
 
     private init() {
-        let backendURL = Bundle.main.infoDictionary?["BACKEND_URL"] as? String ?? "https://backend.zstream.mov"
+        let backendURL = UserDefaults.standard.string(forKey: "backend_url") 
+            ?? Bundle.main.infoDictionary?["BACKEND_URL"] as? String 
+            ?? "https://backend.zstream.mov"
         guard let url = URL(string: backendURL) else {
-            fatalError("Invalid BACKEND_URL in Info.plist")
+            fatalError("Invalid BACKEND_URL")
         }
         self.baseURL = url
+    }
+    
+    /// Update backend URL at runtime (from Settings)
+    func updateBackendURL(_ newURL: String) {
+        guard let url = URL(string: newURL) else { return }
+        UserDefaults.standard.set(newURL, forKey: "backend_url")
+        // Note: This requires app restart to take effect for shared instance
+        // For immediate effect, create new APIClient instance or restart
     }
 
     /// Generic JSON request against the ZStream backend.

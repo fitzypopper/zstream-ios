@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject private var store: ZStreamStore
+    @State private var backendURL = UserDefaults.standard.string(forKey: "backend_url") ?? "https://backend.zstream.mov"
 
     var body: some View {
         NavigationView {
@@ -25,6 +26,21 @@ struct SettingsView: View {
                         }
                     }
                     .padding(.vertical, 8)
+                }
+
+                Section("Backend") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        TextField("Backend URL", text: $backendURL)
+                            .textInputAutocapitalization(.never)
+                            .textFieldStyle(.roundedBorder)
+                            .onSubmit {
+                                UserDefaults.standard.set(backendURL, forKey: "backend_url")
+                            }
+                        Text("Changes take effect on app restart")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.vertical, 4)
                 }
 
                 Section("Playback") {

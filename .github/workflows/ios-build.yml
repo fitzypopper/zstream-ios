@@ -93,7 +93,6 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             OTHER_LDFLAGS="$(inherited) -framework WebKit" \
             TMDB_API_KEY="${{ secrets.TMDB_API_KEY }}" \
-            BACKEND_URL="${{ secrets.BACKEND_URL }}" \
             build
 
       - name: Package IPA (ad-hoc signed)
