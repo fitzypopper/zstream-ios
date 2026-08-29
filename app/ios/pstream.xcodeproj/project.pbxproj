@@ -9,21 +9,43 @@
 /* Begin PBXBuildFile section */
 		0C80B921A6F3F58F76C31292 /* libPods-pstream.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5DCACB8F33CDC322A6C60F78 /* libPods-pstream.a */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
+		298F4B9D963F8E19C6A86E72 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 277B41148311BFD8E9F2DEC1 /* APIClient.swift */; };
+		53044771B222E862A08BF48F /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F494B0885F7CE2926B5C4CB /* HomeView.swift */; };
+		54404D69AB9B67500F98FDFF /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4557446592FB67EA09591D04 /* Theme.swift */; };
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
+		7B8945BFA9B3DB88C4054551 /* ZStreamAuth.m in Sources */ = {isa = PBXBuildFile; fileRef = EDAA479DAD67AF68AEEA503A /* ZStreamAuth.m */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
+		882A48A48A2CB02EA19C6C74 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 036141D6884BB32AC8098C47 /* ContentView.swift */; };
+		AD514BDDBAE3A606560C333C /* ZStreamAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97C84936BBE1B0D146E27B41 /* ZStreamAuth.swift */; };
+		BFBD4AC2B72847FF0657C83E /* UISelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 129446C4A0A2E9046C0BB2E2 /* UISelection.swift */; };
+		D65547F6B18BF48F60A74A9B /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 510B415DA15064C1EE2D5711 /* Models.swift */; };
+		DF4D4D61B45B156B6EFDC85F /* ZStreamStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DEB4567BCBD2A099A0365D2 /* ZStreamStore.swift */; };
+		EC3D4FC386DA487A50658F4D /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D444C4F803E4C93D2F8CC00 /* SettingsView.swift */; };
+		F66E4BACA54747D60BD0FF1E /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAC4408E8DDBA4A3FFFE09DF /* LoginView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		036141D6884BB32AC8098C47 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ContentView.swift; path = app/ios/pstream/Swift/UI/ContentView.swift; sourceTree = SOURCE_ROOT; };
+		0F494B0885F7CE2926B5C4CB /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HomeView.swift; path = app/ios/pstream/Swift/UI/HomeView.swift; sourceTree = SOURCE_ROOT; };
+		129446C4A0A2E9046C0BB2E2 /* UISelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UISelection.swift; path = app/ios/pstream/Swift/Bridge/UISelection.swift; sourceTree = SOURCE_ROOT; };
 		13B07F961A680F5B00A75B9A /* ZStream.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ZStream.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = pstream/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = pstream/Info.plist; sourceTree = "<group>"; };
 		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = pstream/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		1DEB4567BCBD2A099A0365D2 /* ZStreamStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ZStreamStore.swift; path = app/ios/pstream/Swift/Data/ZStreamStore.swift; sourceTree = SOURCE_ROOT; };
+		277B41148311BFD8E9F2DEC1 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = APIClient.swift; path = app/ios/pstream/Swift/Data/APIClient.swift; sourceTree = SOURCE_ROOT; };
+		2D444C4F803E4C93D2F8CC00 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SettingsView.swift; path = app/ios/pstream/Swift/UI/SettingsView.swift; sourceTree = SOURCE_ROOT; };
 		3B4392A12AC88292D35C810B /* Pods-pstream.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-pstream.debug.xcconfig"; path = "Target Support Files/Pods-pstream/Pods-pstream.debug.xcconfig"; sourceTree = "<group>"; };
+		4557446592FB67EA09591D04 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Theme.swift; path = app/ios/pstream/Swift/UI/Theme.swift; sourceTree = SOURCE_ROOT; };
+		510B415DA15064C1EE2D5711 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Models.swift; path = app/ios/pstream/Swift/Data/Models.swift; sourceTree = SOURCE_ROOT; };
 		5709B34CF0A7D63546082F79 /* Pods-pstream.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-pstream.release.xcconfig"; path = "Target Support Files/Pods-pstream/Pods-pstream.release.xcconfig"; sourceTree = "<group>"; };
 		5DCACB8F33CDC322A6C60F78 /* libPods-pstream.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-pstream.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = pstream/AppDelegate.swift; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = pstream/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		97C84936BBE1B0D146E27B41 /* ZStreamAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ZStreamAuth.swift; path = app/ios/pstream/Swift/Bridge/ZStreamAuth.swift; sourceTree = SOURCE_ROOT; };
+		AAC4408E8DDBA4A3FFFE09DF /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LoginView.swift; path = app/ios/pstream/Swift/UI/LoginView.swift; sourceTree = SOURCE_ROOT; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
+		EDAA479DAD67AF68AEEA503A /* ZStreamAuth.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = ZStreamAuth.m; path = app/ios/pstream/Swift/Bridge/ZStreamAuth.m; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -38,7 +60,7 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		13B07FAE1A68108700A75B9A /* pstream */ = {
+		13B07FAE1A68108700A75B9A /* ZStream */ = {
 			isa = PBXGroup;
 			children = (
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
@@ -69,11 +91,22 @@
 		83CBB9F61A601CBA00E9B192 = {
 			isa = PBXGroup;
 			children = (
-				13B07FAE1A68108700A75B9A /* pstream */,
+				13B07FAE1A68108700A75B9A /* ZStream */,
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
 				BBD78D7AC51CEA395F1C20DB /* Pods */,
+				97C84936BBE1B0D146E27B41 /* ZStreamAuth.swift */,
+				EDAA479DAD67AF68AEEA503A /* ZStreamAuth.m */,
+				129446C4A0A2E9046C0BB2E2 /* UISelection.swift */,
+				510B415DA15064C1EE2D5711 /* Models.swift */,
+				277B41148311BFD8E9F2DEC1 /* APIClient.swift */,
+				1DEB4567BCBD2A099A0365D2 /* ZStreamStore.swift */,
+				4557446592FB67EA09591D04 /* Theme.swift */,
+				AAC4408E8DDBA4A3FFFE09DF /* LoginView.swift */,
+				036141D6884BB32AC8098C47 /* ContentView.swift */,
+				0F494B0885F7CE2926B5C4CB /* HomeView.swift */,
+				2D444C4F803E4C93D2F8CC00 /* SettingsView.swift */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -100,7 +133,7 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		13B07F861A680F5B00A75B9A /* pstream */ = {
+		13B07F861A680F5B00A75B9A /* ZStream */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "ZStream" */;
 			buildPhases = (
@@ -147,7 +180,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				13B07F861A680F5B00A75B9A /* pstream */,
+				13B07F861A680F5B00A75B9A /* ZStream */,
 			);
 		};
 /* End PBXProject section */
@@ -245,6 +278,17 @@
 			buildActionMask = 2147483647;
 			files = (
 				761780ED2CA45674006654EE /* AppDelegate.swift in Sources */,
+				AD514BDDBAE3A606560C333C /* ZStreamAuth.swift in Sources */,
+				7B8945BFA9B3DB88C4054551 /* ZStreamAuth.m in Sources */,
+				BFBD4AC2B72847FF0657C83E /* UISelection.swift in Sources */,
+				D65547F6B18BF48F60A74A9B /* Models.swift in Sources */,
+				298F4B9D963F8E19C6A86E72 /* APIClient.swift in Sources */,
+				DF4D4D61B45B156B6EFDC85F /* ZStreamStore.swift in Sources */,
+				54404D69AB9B67500F98FDFF /* Theme.swift in Sources */,
+				F66E4BACA54747D60BD0FF1E /* LoginView.swift in Sources */,
+				882A48A48A2CB02EA19C6C74 /* ContentView.swift in Sources */,
+				53044771B222E862A08BF48F /* HomeView.swift in Sources */,
+				EC3D4FC386DA487A50658F4D /* SettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -271,7 +315,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.zstream.ios";
+				PRODUCT_BUNDLE_IDENTIFIER = com.zstream.ios;
 				PRODUCT_NAME = ZStream;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -298,7 +342,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.zstream.ios";
+				PRODUCT_BUNDLE_IDENTIFIER = com.zstream.ios;
 				PRODUCT_NAME = ZStream;
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";

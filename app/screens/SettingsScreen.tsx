@@ -23,6 +23,7 @@ import {
   type Option,
 } from '../components/settings/SettingsRows';
 import { clearUserData, notifyAuthChanged } from '../config/env';
+import { getUIPreference, setUIPreference } from '../native/nativeAuth';
 import { getTVSyncManager } from '../services/tvSync';
 import { RootStackParamList } from '../navigation/types';
 import { useSettingsActions } from '../hooks/useUserSettings';
@@ -140,6 +141,11 @@ const SettingsSections: React.FC<SectionProps> = ({
           }
           onPress={() => {}}
         />
+      </SectionBody>
+
+      <SectionHeader>INTERFACE</SectionHeader>
+      <SectionBody colors={colors} radii={radii}>
+        <InterfaceRow colors={colors} radii={radii} />
       </SectionBody>
 
       <SectionHeader>APPEARANCE</SectionHeader>
@@ -427,6 +433,54 @@ const SectionBody: React.FC<{ colors: Record<string, string>; radii: Record<stri
     {children}
   </View>
 );
+
+/**
+ * Lets the user pick the launched UI (React Native vs SwiftUI).
+ * Backed by the native ZStreamAuth module (UserDefaults); needs a restart.
+ */
+const InterfaceRow: React.FC<{ colors: Record<string, string>; radii: Record<string, number> }> = ({
+  colors,
+  radii,
+}) => {
+  const [uiSelection, setUiSelection] = React.useState<'reactNative' | 'swiftUI'>('reactNative');
+
+  React.useEffect(() => {
+    let mounted = true;
+    getUIPreference()
+      .then((value) => {
+        if (mounted) setUiSelection(value);
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  return (
+    <SectionBody colors={colors} radii={radii}>
+      <ChoiceRow
+        title="UI"
+        value={uiSelection}
+        options={[
+          { value: 'reactNative', label: 'React Native' },
+          { value: 'swiftUI', label: 'SwiftUI' },
+        ]}
+        onSelect={(value) => {
+          const next: 'reactNative' | 'swiftUI' = value === 'swiftUI' ? 'swiftUI' : 'reactNative';
+          setUiSelection(next);
+          setUIPreference(next)
+            .then(() => {
+              Alert.alert(
+                'Restart required',
+                'Fully close and reopen ZStream to switch the interface.',
+              );
+            })
+            .catch(() => {});
+        }}
+      />
+    </SectionBody>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {

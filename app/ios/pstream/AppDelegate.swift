@@ -1,4 +1,5 @@
 import UIKit
+import SwiftUI
 import React
 import React_RCTAppDelegate
 import ReactAppDependencyProvider
@@ -14,6 +15,15 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
   ) -> Bool {
+    window = UIWindow(frame: UIScreen.main.bounds)
+
+    if UISelection.current == .swiftUI {
+      let rootView: some View = ContentView().environmentObject(ZStreamStore.shared)
+      window?.rootViewController = UIHostingController(rootView: rootView)
+      window?.makeKeyAndVisible()
+      return true
+    }
+
     let delegate = ReactNativeDelegate()
     let factory = RCTReactNativeFactory(delegate: delegate)
     delegate.dependencyProvider = RCTAppDependencyProvider()
@@ -21,11 +31,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     reactNativeDelegate = delegate
     reactNativeFactory = factory
 
-    window = UIWindow(frame: UIScreen.main.bounds)
-
     factory.startReactNative(
       withModuleName: "zstream",
-      in: window,
+      in: window!,
       launchOptions: launchOptions
     )
 

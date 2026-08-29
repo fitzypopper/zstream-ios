@@ -3,6 +3,12 @@
  */
 
 import { getItem, setItem, removeItem, STORAGE_KEYS } from '../store/storage';
+import {
+  hasNativeAuth,
+  nativeGetItem,
+  nativeSetItem,
+  nativeRemoveItem,
+} from '../native/nativeAuth';
 import { BASE_API_URL } from './defaults';
 
 /**
@@ -44,12 +50,65 @@ export async function setCurrentInstance(url: string): Promise<void> {
   await setItem(STORAGE_KEYS.INSTANCE_URL, url);
 }
 
+const isAuthKey = (key: string): boolean =>
+  key === STORAGE_KEYS.AUTH_TOKEN ||
+  key === STORAGE_KEYS.USER_ID ||
+  key === STORAGE_KEYS.USER_PROFILE;
+
+/** Read a storage key, preferring the native Keychain for auth keys. */
+async function readKey(key: string): Promise<string | null> {
+  if (isAuthKey(key) && hasNativeAuth()) {
+    try {
+      const value = await nativeGetItem(key);
+      if (value !== null) return value;
+    } catch {
+      /* fall back to the regular storage */
+    }
+  }
+  try {
+    return await getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+/** Write a storage key to both the native Keychain (when applicable) and the regular storage. */
+async function writeKey(key: string, value: string): Promise<void> {
+  if (isAuthKey(key) && hasNativeAuth()) {
+    try {
+      await nativeSetItem(key, value);
+    } catch {
+      /* ignore native write errors; the mirror below still persists */
+    }
+  }
+  try {
+    await setItem(key, value);
+  } catch {
+    /* best effort */
+  }
+}
+
+async function removeKey(key: string): Promise<void> {
+  if (isAuthKey(key) && hasNativeAuth()) {
+    try {
+      await nativeRemoveItem(key);
+    } catch {
+      /* best effort */
+    }
+  }
+  try {
+    await removeItem(key);
+  } catch {
+    /* best effort */
+  }
+}
+
 /**
  * Get the stored authentication token.
  */
 export async function getAuthToken(): Promise<string | null> {
   try {
-    return await getItem(STORAGE_KEYS.AUTH_TOKEN);
+    return await readKey(STORAGE_KEYS.AUTH_TOKEN);
   } catch {
     return null;
   }
@@ -59,14 +118,14 @@ export async function getAuthToken(): Promise<string | null> {
  * Set the authentication token.
  */
 export async function setAuthToken(token: string): Promise<void> {
-  await setItem(STORAGE_KEYS.AUTH_TOKEN, token);
+  await writeKey(STORAGE_KEYS.AUTH_TOKEN, token);
 }
 
 /**
  * Clear the authentication token (logout).
  */
 export async function clearAuthToken(): Promise<void> {
-  await removeItem(STORAGE_KEYS.AUTH_TOKEN);
+  await removeKey(STORAGE_KEYS.AUTH_TOKEN);
 }
 
 /**
@@ -82,7 +141,7 @@ export async function isAuthenticated(): Promise<boolean> {
  */
 export async function getUserProfile(): Promise<string | null> {
   try {
-    return await getItem(STORAGE_KEYS.USER_PROFILE);
+    return await readKey(STORAGE_KEYS.USER_PROFILE);
   } catch {
     return null;
   }
@@ -94,7 +153,7 @@ export async function getUserProfile(): Promise<string | null> {
  */
 export async function getUserId(): Promise<string | null> {
   try {
-    const stored = await getItem(STORAGE_KEYS.USER_ID);
+    const stored = await readKey(STORAGE_KEYS.USER_ID);
     if (stored) return stored;
 
     const profileRaw = await getUserProfile();
@@ -102,7 +161,7 @@ export async function getUserId(): Promise<string | null> {
       const profile = JSON.parse(profileRaw) as { id?: string; userId?: string };
       const id = profile.id ?? profile.userId ?? null;
       if (id) {
-        await setItem(STORAGE_KEYS.USER_ID, id);
+        await writeKey(STORAGE_KEYS.USER_ID, id);
       }
       return id;
     }
@@ -116,21 +175,21 @@ export async function getUserId(): Promise<string | null> {
  * Set the current user's ID.
  */
 export async function setUserId(userId: string): Promise<void> {
-  await setItem(STORAGE_KEYS.USER_ID, userId);
+  await writeKey(STORAGE_KEYS.USER_ID, userId);
 }
 
 /**
  * Set the user profile.
  */
 export async function setUserProfile(profile: string): Promise<void> {
-  await setItem(STORAGE_KEYS.USER_PROFILE, profile);
+  await writeKey(STORAGE_KEYS.USER_PROFILE, profile);
 }
 
 /**
  * Clear user data (logout).
  */
 export async function clearUserData(): Promise<void> {
-  await removeItem(STORAGE_KEYS.AUTH_TOKEN);
-  await removeItem(STORAGE_KEYS.USER_PROFILE);
-  await removeItem(STORAGE_KEYS.USER_ID);
+  await removeKey(STORAGE_KEYS.AUTH_TOKEN);
+  await removeKey(STORAGE_KEYS.USER_PROFILE);
+  await removeKey(STORAGE_KEYS.USER_ID);
 }
