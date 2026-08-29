@@ -22,23 +22,16 @@ target 'ZStream' do
     :app_path => "#{Pod::Config.instance.installation_root}/.."
   )
 
+  # Add WebKit framework to app target for WKWebView
+  user_target_xcconfig(
+    'OTHER_LDFLAGS' => '$(inherited) -framework WebKit'
+  )
+
   post_install do |installer|
     react_native_post_install(
       installer,
       config[:reactNativePath],
       :mac_catalyst_enabled => false,
     )
-
-    # Add WebKit framework to main app target for WKWebView
-    installer.aggregate_targets.each do |aggregate|
-      aggregate.user_project.targets.each do |target|
-        if target.name == 'ZStream'
-          target.build_configurations.each do |config|
-            config.build_settings['OTHER_LDFLAGS'] ||= '$(inherited)'
-            config.build_settings['OTHER_LDFLAGS'] << ' -framework WebKit'
-          end
-        end
-      end
-    end
   end
 end
