@@ -82,14 +82,13 @@ jobs:
             dd-xcode${{ env.XCODE_VERSION }}-
 
       - name: Build app (no signing)
-        working-directory: app/ios
         run: |
           xcodebuild \
-            -workspace pstream.xcworkspace \
+            -workspace app/ios/pstream.xcworkspace \
             -scheme ZStream \
             -configuration Release \
             -sdk iphoneos \
-            -derivedDataPath build \
+            -derivedDataPath app/ios/build \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             OTHER_LDFLAGS="$(inherited) -framework WebKit" \
