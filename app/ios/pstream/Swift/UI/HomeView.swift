@@ -328,7 +328,7 @@ struct PlayerView: View {
                 Spacer()
             }
         }
-        .toolbar(.hidden, for: .navigationBar)
+        .navigationBarHidden(true)
     }
 }
 
