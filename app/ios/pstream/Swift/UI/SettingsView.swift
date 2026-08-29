@@ -3,55 +3,115 @@ import SwiftUI
 struct SettingsView: View {
     @EnvironmentObject private var store: ZStreamStore
 
-    @State private var uiSelection: String = UISelection.current.rawValue
-    @State private var showRestartAlert = false
-
     var body: some View {
-        NavigationView {
+        NavigationStack {
             List {
-                Section("Account") {
+                Section {
+                    HStack(spacing: 16) {
+                        ZStack {
+                            Circle()
+                                .fill(ZStreamTheme.primaryGradient)
+                                .frame(width: 56, height: 56)
+                            Text(nickname.prefix(1).uppercased())
+                                .font(.title.bold())
+                                .foregroundColor(.white)
+                        }
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(nickname)
+                                .font(.headline)
+                            Text("Signed in")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .padding(.vertical, 8)
+                }
+
+                Section("Playback") {
                     HStack {
-                        Text("User")
+                        Label("Default Quality", systemImage: "video.badge.waveform")
                         Spacer()
-                        Text(nickname)
+                        Text("Auto")
                             .foregroundColor(.secondary)
+                    }
+                    HStack {
+                        Label("Auto-play Next", systemImage: "play.circle")
+                        Spacer()
+                        Toggle("", isOn: .constant(true))
+                    }
+                    HStack {
+                        Label("Skip Intro", systemImage: "forward.frame")
+                        Spacer()
+                        Toggle("", isOn: .constant(true))
                     }
                 }
 
-                Section("Interface") {
-                    Picker("UI", selection: $uiSelection) {
-                        Text("React Native").tag("reactNative")
-                        Text("SwiftUI").tag("swiftUI")
+                Section("Appearance") {
+                    HStack {
+                        Label("Theme", systemImage: "paintbrush")
+                        Spacer()
+                        Text("System")
+                            .foregroundColor(.secondary)
                     }
-                    .pickerStyle(.segmented)
-                    .onChange(of: uiSelection) { value in
-                        guard let selection = UISelection(rawValue: value) else { return }
-                        UISelection.current = selection
-                        showRestartAlert = true
+                    HStack {
+                        Label("Compact Rows", systemImage: "rectangle.3.group")
+                        Spacer()
+                        Toggle("", isOn: .constant(false))
+                    }
+                }
+
+                Section("Data & Privacy") {
+                    HStack {
+                        Label("Clear Cache", systemImage: "trash")
+                        Spacer()
+                        Text("2.4 MB")
+                            .foregroundColor(.secondary)
+                    }
+                    HStack {
+                        Label("Download Quality", systemImage: "arrow.down.circle")
+                        Spacer()
+                        Text("1080p")
+                            .foregroundColor(.secondary)
                     }
                 }
 
                 Section("About") {
                     HStack {
-                        Text("Version")
+                        Label("Version", systemImage: "info.circle")
                         Spacer()
                         Text("1.0.0")
                             .foregroundColor(.secondary)
                     }
+                    HStack {
+                        Label("Source Code", systemImage: "chevron.left.forwardslash.chevron.right")
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundColor(.tertiary)
+                    }
+                    HStack {
+                        Label("Report Issue", systemImage: "exclamationmark.bubble")
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundColor(.tertiary)
+                    }
                 }
 
                 Section {
-                    Button("Sign Out", role: .destructive) {
+                    Button(role: .destructive) {
                         store.logout()
+                    } label: {
+                        HStack {
+                            Spacer()
+                            Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
+                            Spacer()
+                        }
                     }
                 }
             }
+            .background(ZStreamTheme.background.ignoresSafeArea())
             .navigationTitle("Settings")
-            .alert("Restart required", isPresented: $showRestartAlert) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text("Fully close and reopen ZStream to switch the interface.")
-            }
         }
     }
 

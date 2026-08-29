@@ -13,7 +13,9 @@ final class ZStreamStore: ObservableObject {
     }
 
     @Published var authState: AuthState = .signedOut
-    @Published var trending: [TMDBItem] = []
+    @Published var homeRows: [TMDBRow] = []
+    @Published var searchResults: [TMDBItem] = []
+    @Published var isSearching = false
     @Published var isLoadingHome = false
     @Published var errorMessage: String?
 
@@ -39,11 +41,10 @@ final class ZStreamStore: ObservableObject {
         authState = .signedIn(userId: userId, nickname: nickname)
     }
 
-    func login(username: String, password: String) async {
+    func login(username: String, password: String, device: String) async {
         errorMessage = nil
-        isLoadingHome = false
         do {
-            let response = try await APIClient.shared.login(username: username, password: password)
+            let response = try await APIClient.shared.login(username: username, password: password, device: device)
             KeychainAuth.shared.save(response.token, forAccount: "auth_token")
             KeychainAuth.shared.save(response.session.user, forAccount: "user_id")
 
@@ -65,6 +66,7 @@ final class ZStreamStore: ObservableObject {
             }
 
             refreshAuthFromKeychain()
+            await loadHome()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -74,7 +76,8 @@ final class ZStreamStore: ObservableObject {
         KeychainAuth.shared.delete(forAccount: "auth_token")
         KeychainAuth.shared.delete(forAccount: "user_id")
         KeychainAuth.shared.delete(forAccount: "user_profile")
-        trending = []
+        homeRows = []
+        searchResults = []
         errorMessage = nil
         authState = .signedOut
     }
@@ -86,9 +89,24 @@ final class ZStreamStore: ObservableObject {
         defer { isLoadingHome = false }
 
         do {
-            trending = try await APIClient.shared.trending()
+            homeRows = try await APIClient.shared.homeRows()
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    func search(query: String) async {
+        guard !query.isEmpty else {
+            searchResults = []
+            return
+        }
+        isSearching = true
+        defer { isSearching = false }
+        do {
+            searchResults = try await APIClient.shared.search(query: query)
+        } catch {
+            errorMessage = error.localizedDescription
+            searchResults = []
         }
     }
 }

@@ -24,9 +24,8 @@ struct APIClient {
     static let shared = APIClient()
 
     private let baseURL = URL(string: "https://backend.zstream.mov")!
-    private let tmdbBaseURL = "https://api.themoviedb.org/3"
-    private let tmdbAPIKey =
-        "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJkMGI2OTRhM2IwYjUwMDgxYmIwNzU4MjYyMjAxMzFmNCIsIm5iZiI6MTcyNTQ0OTI3My45OTk5OTksInN1YiI6IjY2ZDFiY2IwMDNhMjM4NzY5MGMwMjVjMCIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.jGqSqoUGQdXMCN0CGnFC9NFHV3D7AlO2lWY00sYfxEk"
+    static let tmdbBaseURL = "https://api.themoviedb.org/3"
+    static let tmdbAPIKey = "1865f43a0549ca50d341dd9ab8b29f49"
     private let userAgent = "ZStream-iOS/1.4.2 (CFNetwork)"
 
     /// Generic JSON request against the ZStream backend.
@@ -58,28 +57,74 @@ struct APIClient {
     }
 
     /// POST /auth/password/login { username, password, device }
-    func login(username: String, password: String) async throws -> LoginResponse {
+    func login(username: String, password: String, device: String) async throws -> LoginResponse {
         try await request(
             "/auth/password/login",
             method: "POST",
-            body: ["username": username, "password": password, "device": "zstream-ios"]
+            body: ["username": username, "password": password, "device": device]
         )
     }
 
-    /// Combined TMDB trending movies + TV (mirrors the RN fetchHome slice).
-    func trending() async throws -> [TMDBItem] {
-        async let movies = tmdb(path: "/trending/movie/week")
-        async let shows = tmdb(path: "/trending/tv/week")
-        let (movieItems, showItems) = try await (movies, shows)
-        return Array((movieItems + showItems).prefix(20))
+    /// Home rows: trending, popular movies, popular TV (mirrors the site's discovery).
+    func homeRows() async throws -> [TMDBRow] {
+        async let trending = tmdbResults(path: "/trending/all/week")
+        async let movies = tmdbResults(
+            path: "/discover/movie",
+            query: [("sort_by", "popularity.desc"), ("vote_count.gte", "200")]
+        )
+        async let shows = tmdbResults(
+            path: "/discover/tv",
+            query: [("sort_by", "popularity.desc"), ("vote_count.gte", "200")]
+        )
+        let (t, m, s) = try await (trending, movies, shows)
+        return [
+            TMDBRow(title: "Trending", items: t.filter { $0.mediaType != "person" }),
+            TMDBRow(title: "Popular Movies", items: m),
+            TMDBRow(title: "Popular TV", items: s),
+        ]
     }
 
-    private func tmdb(path: String) async throws -> [TMDBItem] {
-        var components = URLComponents(string: tmdbBaseURL + path)!
+    /// Combined movie + TV search (search/multi drops person results).
+    func search(query: String) async throws -> [TMDBItem] {
+        let items = try await tmdbResults(path: "/search/multi", query: [("query", query)])
+        return items.filter { $0.mediaType == "movie" || $0.mediaType == "tv" }
+    }
+
+    func details(type: String, id: Int) async throws -> TMDBItem {
+        try await tmdbObject(path: "/\(type)/\(id)")
+    }
+
+    func showDetails(id: Int) async throws -> TMDBShowDetails {
+        try await tmdbDecode(path: "/tv/\(id)", query: [("append_to_response", "external_ids,credits,content_ratings")])
+    }
+
+    func seasonDetails(tvId: Int, seasonNumber: Int) async throws -> TMDBSeasonDetails {
+        try await tmdbDecode(path: "/tv/\(tvId)/season/\(seasonNumber)", query: [])
+    }
+
+    /// Generate embed URL for playback (uses vidsrc.to)
+    func embedURL(for item: TMDBItem, season: Int? = nil, episode: Int? = nil) -> URL? {
+        if item.isTV, let season = season, let episode = episode {
+            return URL(string: "https://vidsrc.to/embed/tv/\(item.id)/\(season)/\(episode)")
+        } else {
+            return URL(string: "https://vidsrc.to/embed/movie/\(item.id)")
+        }
+    }
+
+    private func tmdbResults(path: String, query: [(String, String)] = []) async throws -> [TMDBItem] {
+        try await tmdbDecode(path: path, query: query) as TMDBTrendingResponse
+    }
+
+    private func tmdbObject(path: String, query: [(String, String)] = []) async throws -> TMDBItem {
+        try await tmdbDecode(path: path, query: query) as TMDBItem
+    }
+
+    private func tmdbDecode<T: Decodable>(path: String, query: [(String, String)]) async throws -> T {
+        var components = URLComponents(string: Self.tmdbBaseURL + path)!
         components.queryItems = [
-            URLQueryItem(name: "api_key", value: tmdbAPIKey),
+            URLQueryItem(name: "api_key", value: Self.tmdbAPIKey),
             URLQueryItem(name: "language", value: "en-US"),
-        ]
+        ] + query.map { URLQueryItem(name: $0.0, value: $0.1) }
 
         guard let url = components.url else { throw APIError.invalidResponse }
         var request = URLRequest(url: url)
@@ -90,6 +135,6 @@ struct APIClient {
         guard (200..<300).contains(http.statusCode) else {
             throw APIError.http(http.statusCode)
         }
-        return try JSONDecoder().decode(TMDBTrendingResponse.self, from: data).results
+        return try JSONDecoder().decode(T.self, from: data)
     }
 }

@@ -10,7 +10,7 @@ export const BASE_API_URL = 'https://backend.zstream.mov';
 /**
  * TMDB API key for metadata lookups.
  */
-export const TMDB_API_KEY = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJkMGI2OTRhM2IwYjUwMDgxYmIwNzU4MjYyMjAxMzFmNCIsIm5iZiI6MTcyNTQ0OTI3My45OTk5OTksInN1YiI6IjY2ZDFiY2IwMDNhMjM4NzY5MGMwMjVjMCIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.jGqSqoUGQdXMCN0CGnFC9NFHV3D7AlO2lWY00sYfxEk';
+export const TMDB_API_KEY = '1865f43a0549ca50d341dd9ab8b29f49';
 
 /**
  * API request timeout in milliseconds
