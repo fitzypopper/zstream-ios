@@ -123,6 +123,39 @@ export interface AuthLoginCompleteResponse {
 }
 
 /**
+ * Session returned by the ZStream backend on login.
+ */
+export interface AuthSession {
+  id: string;
+  userId: string;
+  device: string;
+}
+
+/**
+ * User object returned by the ZStream backend on login.
+ */
+export interface AuthUser {
+  id: string;
+  nickname?: string;
+  profile?: {
+    colorA?: string;
+    colorB?: string;
+    icon?: string;
+  };
+  permissions?: string[];
+}
+
+/**
+ * Login response (movie-web-style auth).
+ * Shape: { token, session: { id, userId, device }, user? }
+ */
+export interface LoginResponse {
+  token: string;
+  session: AuthSession;
+  user?: AuthUser;
+}
+
+/**
  * Bookmark item
  */
 export interface Bookmark {

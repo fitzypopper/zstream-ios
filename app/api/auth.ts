@@ -6,6 +6,7 @@ import { get, post, put, patch, del } from './client';
 import type {
   AuthLoginStartResponse,
   AuthLoginCompleteResponse,
+  LoginResponse,
   UserProfile,
   UserSettings,
   Bookmark,
@@ -58,26 +59,39 @@ export async function completePasskeyRegister(
 }
 
 /**
- * Login with passphrase (BIP39-style words).
+ * Login with username + password.
  * POST /auth/password/login
+ * Body: { username, password, device }
+ * Returns: { token, session: { id, userId, device }, user? }
  */
-export async function loginWithPassphrase(
-  passphrase: string,
-): Promise<AuthLoginCompleteResponse> {
-  return post<AuthLoginCompleteResponse>('/auth/password/login', {
-    passphrase,
+export async function loginWithPassword(
+  username: string,
+  password: string,
+  device?: string,
+): Promise<LoginResponse> {
+  return post<LoginResponse>('/auth/password/login', {
+    username,
+    password,
+    device: device ?? 'zstream-ios',
   });
 }
 
 /**
- * Register with passphrase.
+ * Register with username + password.
  * POST /auth/password/register
+ * Body: { username, password, device, namespace, profile }
  */
-export async function registerWithPassphrase(
-  passphrase: string,
-): Promise<AuthLoginCompleteResponse> {
-  return post<AuthLoginCompleteResponse>('/auth/password/register', {
-    passphrase,
+export async function registerWithPassword(
+  username: string,
+  password: string,
+  device?: string,
+): Promise<LoginResponse> {
+  return post<LoginResponse>('/auth/password/register', {
+    username,
+    password,
+    device: device ?? 'zstream-ios',
+    namespace: 'movie-web',
+    profile: null,
   });
 }
 

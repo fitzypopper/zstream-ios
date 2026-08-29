@@ -1,6 +1,6 @@
 /**
  * LoginScreen - ZStream authentication screen.
- * Supports passkey and passphrase login methods.
+ * Username + password login against the ZStream backend.
  */
 import React, { useState } from 'react';
 import {
@@ -9,7 +9,6 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
@@ -17,13 +16,8 @@ import {
 import { useTheme } from '../theme/ThemeProvider';
 import { ThemedView } from '../components/ThemedView';
 import { ThemedText } from '../components/ThemedText';
-import {
-  loginWithPassphrase,
-  startPasskeyLogin,
-} from '../api/auth';
+import { loginWithPassword } from '../api/auth';
 import { setAuthToken, setUserProfile, setUserId, notifyAuthChanged } from '../config/env';
-
-type LoginMethod = 'passphrase' | 'passkey';
 
 interface LoginScreenProps {
   onLoginSuccess?: () => void;
@@ -31,14 +25,15 @@ interface LoginScreenProps {
 
 const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
   const { colors, radii } = useTheme();
-  const [method, setMethod] = useState<LoginMethod>('passphrase');
-  const [passphrase, setPassphrase] = useState('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handlePassphraseLogin = async () => {
-    if (!passphrase.trim()) {
-      setError('Please enter your passphrase');
+  const handleLogin = async () => {
+    const trimmedUsername = username.trim();
+    if (!trimmedUsername || !password) {
+      setError('Please enter your username and password');
       return;
     }
 
@@ -46,11 +41,21 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
     setError(null);
 
     try {
-      const response = await loginWithPassphrase(passphrase.trim());
+      const response = await loginWithPassword(trimmedUsername, password);
       await setAuthToken(response.token);
-      await setUserId(response.userId);
-      if (response.profile) {
-        await setUserProfile(JSON.stringify(response.profile));
+      const userId = response.session?.userId;
+      if (userId) {
+        await setUserId(userId);
+      }
+      if (response.user) {
+        await setUserProfile(
+          JSON.stringify({
+            id: response.user.id,
+            userId,
+            nickname: response.user.nickname,
+            profile: response.user.profile,
+          }),
+        );
       }
       notifyAuthChanged();
       if (onLoginSuccess) {
@@ -59,36 +64,9 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       // Navigation will automatically switch to Main screen
       // because RootNavigator checks authentication state
     } catch (err: any) {
-      setError(err.message || 'Login failed. Please check your passphrase.');
+      setError(err.message || 'Login failed. Please check your username and password.');
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handlePasskeyLogin = async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      await startPasskeyLogin();
-      // In a real app, this would trigger iOS passkey flow
-      // For now, show an alert that passkey is coming soon
-      Alert.alert(
-        'Passkey Login',
-        'Passkey login will be available in a future update. Please use passphrase login for now.',
-      );
-      setIsLoading(false);
-    } catch (err: any) {
-      setError(err.message || 'Passkey login failed.');
-      setIsLoading(false);
-    }
-  };
-
-  const handleLogin = () => {
-    if (method === 'passphrase') {
-      handlePassphraseLogin();
-    } else {
-      handlePasskeyLogin();
     }
   };
 
@@ -117,87 +95,67 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 
           {/* Login Form */}
           <View style={styles.formContainer}>
-            {/* Method Toggle */}
-            <View style={[styles.methodToggle, { backgroundColor: colors.SURFACE, borderRadius: radii.md }]}>
-              <TouchableOpacity
+            {/* Input Fields */}
+            <View style={styles.inputContainer}>
+              <ThemedText variant="small" color="secondary" style={styles.inputLabel}>
+                Username
+              </ThemedText>
+              <TextInput
                 style={[
-                  styles.methodButton,
-                  method === 'passphrase' && { backgroundColor: colors.PRIMARY },
-                  { borderRadius: radii.md },
+                  styles.input,
+                  {
+                    backgroundColor: colors.SURFACE,
+                    color: colors.TEXT_PRIMARY,
+                    borderRadius: radii.md,
+                    borderColor: error ? colors.ERROR : colors.CARD,
+                  },
                 ]}
-                onPress={() => setMethod('passphrase')}
-                activeOpacity={0.8}>
-                <ThemedText
-                  variant="body"
-                  color={method === 'passphrase' ? 'primary' : 'secondary'}>
-                  Passphrase
-                </ThemedText>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.methodButton,
-                  method === 'passkey' && { backgroundColor: colors.PRIMARY },
-                  { borderRadius: radii.md },
-                ]}
-                onPress={() => setMethod('passkey')}
-                activeOpacity={0.8}>
-                <ThemedText
-                  variant="body"
-                  color={method === 'passkey' ? 'primary' : 'secondary'}>
-                  Passkey
-                </ThemedText>
-              </TouchableOpacity>
+                placeholder="username"
+                placeholderTextColor={colors.MUTED}
+                value={username}
+                onChangeText={(text) => {
+                  setUsername(text);
+                  setError(null);
+                }}
+                autoCapitalize="none"
+                autoCorrect={false}
+                returnKeyType="next"
+              />
             </View>
 
-            {/* Input Fields */}
-            {method === 'passphrase' && (
-              <View style={styles.inputContainer}>
-                <ThemedText variant="small" color="secondary" style={styles.inputLabel}>
-                  Enter your passphrase
+            <View style={styles.inputContainer}>
+              <ThemedText variant="small" color="secondary" style={styles.inputLabel}>
+                Password
+              </ThemedText>
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: colors.SURFACE,
+                    color: colors.TEXT_PRIMARY,
+                    borderRadius: radii.md,
+                    borderColor: error ? colors.ERROR : colors.CARD,
+                  },
+                ]}
+                placeholder="password"
+                placeholderTextColor={colors.MUTED}
+                value={password}
+                onChangeText={(text) => {
+                  setPassword(text);
+                  setError(null);
+                }}
+                autoCapitalize="none"
+                autoCorrect={false}
+                secureTextEntry
+                returnKeyType="go"
+                onSubmitEditing={handleLogin}
+              />
+              {error && (
+                <ThemedText variant="small" color="error" style={styles.errorText}>
+                  {error}
                 </ThemedText>
-                <TextInput
-                  style={[
-                    styles.input,
-                    {
-                      backgroundColor: colors.SURFACE,
-                      color: colors.TEXT_PRIMARY,
-                      borderRadius: radii.md,
-                      borderColor: error ? colors.ERROR : colors.CARD,
-                    },
-                  ]}
-                  placeholder="word1 word2 word3..."
-                  placeholderTextColor={colors.MUTED}
-                  value={passphrase}
-                  onChangeText={(text) => {
-                    setPassphrase(text);
-                    setError(null);
-                  }}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  secureTextEntry
-                  returnKeyType="go"
-                  onSubmitEditing={handleLogin}
-                />
-                {error && (
-                  <ThemedText variant="small" color="error" style={styles.errorText}>
-                    {error}
-                  </ThemedText>
-                )}
-              </View>
-            )}
-
-            {method === 'passkey' && (
-              <View style={styles.passkeyInfo}>
-                <ThemedText variant="body" color="secondary" style={styles.passkeyInfoText}>
-                  Use your device's passkey to sign in securely. This uses Face ID, Touch ID, or your device passcode.
-                </ThemedText>
-                {error && (
-                  <ThemedText variant="small" color="error" style={styles.errorText}>
-                    {error}
-                  </ThemedText>
-                )}
-              </View>
-            )}
+              )}
+            </View>
 
             {/* Login Button */}
             <TouchableOpacity
@@ -212,7 +170,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                 <ActivityIndicator color={colors.TEXT_PRIMARY} size="small" />
               ) : (
                 <ThemedText variant="body" style={styles.loginButtonText}>
-                  {method === 'passphrase' ? 'Sign In' : 'Continue with Passkey'}
+                  Sign In
                 </ThemedText>
               )}
             </TouchableOpacity>
@@ -274,16 +232,6 @@ const styles = StyleSheet.create({
   formContainer: {
     marginBottom: 32,
   },
-  methodToggle: {
-    flexDirection: 'row',
-    padding: 4,
-    marginBottom: 24,
-  },
-  methodButton: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
   inputContainer: {
     marginBottom: 16,
   },
@@ -296,16 +244,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     fontSize: 16,
     borderWidth: 1,
-  },
-  passkeyInfo: {
-    marginBottom: 16,
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-  },
-  passkeyInfoText: {
-    textAlign: 'center',
-    lineHeight: 22,
   },
   errorText: {
     marginTop: 8,
