@@ -19,15 +19,15 @@ struct AppTabView: View {
 
     var body: some View {
         TabView(selection: $selection) {
-            NavigationStack {
-                HomeViewWrapper()
+            NavigationView {
+                HomeView()
             }
             .tabItem {
                 Label("Home", systemImage: "house.fill")
             }
             .tag(0)
 
-            NavigationStack {
+            NavigationView {
                 SearchView()
             }
             .tabItem {
@@ -35,7 +35,7 @@ struct AppTabView: View {
             }
             .tag(1)
 
-            NavigationStack {
+            NavigationView {
                 SettingsView()
             }
             .tabItem {

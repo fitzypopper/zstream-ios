@@ -4,7 +4,7 @@ struct SettingsView: View {
     @EnvironmentObject private var store: ZStreamStore
 
     var body: some View {
-        NavigationStack {
+        NavigationView {
             List {
                 Section {
                     HStack(spacing: 16) {

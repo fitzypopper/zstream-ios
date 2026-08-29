@@ -5,7 +5,7 @@ struct HomeView: View {
     @EnvironmentObject private var store: ZStreamStore
 
     var body: some View {
-        NavigationStack {
+        NavigationView {
             Group {
                 if store.isLoadingHome && store.homeRows.isEmpty {
                     ProgressView("Loading…")
@@ -63,7 +63,7 @@ struct SectionRow: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: 16) {
                     ForEach(row.items) { item in
-                        NavigationLink(value: item) {
+                        NavigationLink(destination: DetailsView(item: item)) {
                             PosterCard(item: item)
                         }
                         .buttonStyle(.plain)
@@ -75,17 +75,7 @@ struct SectionRow: View {
     }
 }
 
-// Add navigation destination for HomeView's NavigationStack
-struct HomeViewWrapper: View {
-    @EnvironmentObject private var store: ZStreamStore
-
-    var body: some View {
-        HomeView()
-            .navigationDestination(for: TMDBItem.self) { item in
-                DetailsView(item: item)
-            }
-    }
-}
+// HomeViewWrapper removed - using NavigationView with inline NavigationLink destinations
 
 struct PosterCard: View {
     let item: TMDBItem
@@ -153,7 +143,7 @@ struct SearchView: View {
     @State private var debounceTask: Task<Void, Never>?
 
     var body: some View {
-        NavigationStack {
+        NavigationView {
             VStack(spacing: 0) {
                 // Search bar
                 HStack(spacing: 12) {
@@ -215,7 +205,7 @@ struct SearchView: View {
                         ScrollView {
                             LazyVStack(spacing: 12) {
                                 ForEach(store.searchResults) { item in
-                                    NavigationLink(value: item) {
+NavigationLink(destination: DetailsView(item: item)) {
                                         SearchResultRow(item: item)
                                     }
                                     .buttonStyle(.plain)
@@ -229,8 +219,6 @@ struct SearchView: View {
             }
             .background(ZStreamTheme.background.ignoresSafeArea())
             .navigationTitle("Search")
-        .navigationDestination(for: TMDBItem.self) { item in
-            DetailsView(item: item)
         }
     }
 }
