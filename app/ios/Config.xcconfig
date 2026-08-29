@@ -1,0 +1,5 @@
+# ZStream Build Configuration
+# Set these values in your environment or locally
+
+TMDB_API_KEY = $(TMDB_API_KEY)
+BACKEND_URL = https://backend.zstream.mov

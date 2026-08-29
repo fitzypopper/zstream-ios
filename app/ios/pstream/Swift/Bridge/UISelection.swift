@@ -23,7 +23,7 @@ enum UISelection: String {
             lock.lock()
             defer { lock.unlock() }
             UserDefaults.standard.set(newValue.rawValue, forKey: storageKey)
-            UserDefaults.standard.synchronize()
+            // UserDefaults auto-syncs in iOS 13+, no synchronize() needed
         }
     }
 }

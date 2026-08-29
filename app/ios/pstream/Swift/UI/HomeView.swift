@@ -160,20 +160,6 @@ struct SearchView: View {
                                 }
                             }
                         }
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color(.secondarySystemBackground))
-                )
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .onDisappear {
-                    debounceTask?.cancel()
-                }
-
-                // Results
                     if !query.isEmpty {
                         Button { query = "" } label: {
                             Image(systemName: "xmark.circle.fill")
@@ -189,6 +175,9 @@ struct SearchView: View {
                 )
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
+                .onDisappear {
+                    debounceTask?.cancel()
+                }
 
                 // Results
                 Group {
@@ -219,7 +208,7 @@ struct SearchView: View {
                         ScrollView {
                             LazyVStack(spacing: 12) {
                                 ForEach(store.searchResults) { item in
-NavigationLink(destination: DetailsView(item: item)) {
+                                    NavigationLink(destination: DetailsView(item: item)) {
                                         SearchResultRow(item: item)
                                     }
                                     .buttonStyle(.plain)
@@ -288,7 +277,6 @@ struct PlayerView: View {
     let episode: Int?
     @Environment(\.dismiss) private var dismiss
 
-    @State private var webView: WKWebView?
     @State private var isLoading = true
 
     var body: some View {

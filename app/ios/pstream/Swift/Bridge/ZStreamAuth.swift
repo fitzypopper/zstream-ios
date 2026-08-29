@@ -16,7 +16,7 @@ final class KeychainAuth {
     func save(_ value: String, forAccount account: String) -> Bool {
         lock.lock()
         defer { lock.unlock() }
-        
+
         guard let data = value.data(using: .utf8) else { return false }
 
         let baseQuery: [String: Any] = [
@@ -35,7 +35,7 @@ final class KeychainAuth {
         if statusUpdate == errSecItemNotFound {
             var addQuery = baseQuery
             addQuery[kSecValueData as String] = data
-            addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
+            addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
             return SecItemAdd(addQuery as CFDictionary, nil) == errSecSuccess
         }
         return false
@@ -44,7 +44,7 @@ final class KeychainAuth {
     func retrieve(forAccount account: String) -> String? {
         lock.lock()
         defer { lock.unlock() }
-        
+
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -62,7 +62,7 @@ final class KeychainAuth {
     func delete(forAccount account: String) {
         lock.lock()
         defer { lock.unlock() }
-        
+
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,

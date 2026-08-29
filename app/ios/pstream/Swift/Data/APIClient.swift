@@ -8,14 +8,10 @@ enum APIError: Error, LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .invalidResponse:
-            return "Invalid response from the server."
-        case .http(let code):
-            return "Server error (HTTP \(code))."
-        case .message(let text):
-            return text
-        case .missingConfig(let key):
-            return "Missing configuration: \(key). Add to Info.plist."
+        case .invalidResponse: return "Invalid response from the server."
+        case .http(let code): return "Server error (HTTP \(code))."
+        case .message(let text): return text
+        case .missingConfig(let key): return "Missing configuration: \(key). Add to Info.plist."
         }
     }
 }
@@ -28,17 +24,17 @@ struct APIClient {
 
     private let baseURL: URL
     static let tmdbBaseURL = "https://api.themoviedb.org/3"
-    static let tmdbAPIKey: String
+    
+    static var tmdbAPIKey: String {
+        guard let key = Bundle.main.infoDictionary?["TMDB_API_KEY"] as? String, !key.isEmpty else {
+            fatalError("TMDB_API_KEY not found in Info.plist. Add it via xcconfig or build settings.")
+        }
+        return key
+    }
+    
     private let userAgent = "ZStream-iOS/1.4.2 (CFNetwork)"
 
     private init() {
-        // Load from Info.plist (set via xcconfig/environment)
-        guard let tmdbKey = Bundle.main.infoDictionary?["TMDB_API_KEY"] as? String,
-              !tmdbKey.isEmpty else {
-            fatalError("TMDB_API_KEY not found in Info.plist. Add it via xcconfig or build settings.")
-        }
-        Self.tmdbAPIKey = tmdbKey
-
         let backendURL = Bundle.main.infoDictionary?["BACKEND_URL"] as? String ?? "https://backend.zstream.mov"
         guard let url = URL(string: backendURL) else {
             fatalError("Invalid BACKEND_URL in Info.plist")
@@ -69,9 +65,7 @@ struct APIClient {
 
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
-        guard (200..<300).contains(http.statusCode) else {
-            throw APIError.http(http.statusCode)
-        }
+        guard (200..<300).contains(http.statusCode) else { throw APIError.http(http.statusCode) }
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
         return try decoder.decode(T.self, from: data)
@@ -79,24 +73,14 @@ struct APIClient {
 
     /// POST /auth/password/login { username, password, device }
     func login(username: String, password: String, device: String) async throws -> LoginResponse {
-        try await request(
-            "/auth/password/login",
-            method: "POST",
-            body: ["username": username, "password": password, "device": device]
-        )
+        try await request("/auth/password/login", method: "POST", body: ["username": username, "password": password, "device": device])
     }
 
-    /// Home rows: trending, popular movies, popular TV (mirrors the site's discovery).
+    /// Home rows: trending, popular movies, popular TV
     func homeRows() async throws -> [TMDBRow] {
         async let trending = tmdbResults(path: "/trending/all/week")
-        async let movies = tmdbResults(
-            path: "/discover/movie",
-            query: [("sort_by", "popularity.desc"), ("vote_count.gte", "200")]
-        )
-        async let shows = tmdbResults(
-            path: "/discover/tv",
-            query: [("sort_by", "popularity.desc"), ("vote_count.gte", "200")]
-        )
+        async let movies = tmdbResults(path: "/discover/movie", query: [("sort_by", "popularity.desc"), ("vote_count.gte", "200")])
+        async let shows = tmdbResults(path: "/discover/tv", query: [("sort_by", "popularity.desc"), ("vote_count.gte", "200")])
         let (t, m, s) = try await (trending, movies, shows)
         return [
             TMDBRow(title: "Trending", items: t.filter { $0.mediaType != "person" }),
@@ -105,7 +89,7 @@ struct APIClient {
         ]
     }
 
-    /// Combined movie + TV search (search/multi drops person results).
+    /// Combined movie + TV search
     func search(query: String) async throws -> [TMDBItem] {
         let items = try await tmdbResults(path: "/search/multi", query: [("query", query)])
         return items.filter { $0.mediaType == "movie" || $0.mediaType == "tv" }
@@ -154,9 +138,7 @@ struct APIClient {
 
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
-        guard (200..<300).contains(http.statusCode) else {
-            throw APIError.http(http.statusCode)
-        }
+        guard (200..<300).contains(http.statusCode) else { throw APIError.http(http.statusCode) }
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
         return try decoder.decode(T.self, from: data)
