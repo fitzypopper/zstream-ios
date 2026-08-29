@@ -30,19 +30,56 @@ jobs:
           cache: 'npm'
           cache-dependency-path: app/package-lock.json
 
+      - name: Cache node_modules
+        id: node-cache
+        uses: actions/cache@v4
+        with:
+          path: app/node_modules
+          key: node_modules-${{ runner.os }}-${{ hashFiles('app/package-lock.json') }}
+          restore-keys: |
+            node_modules-${{ runner.os }}-
+
       - name: Install npm dependencies
         working-directory: app
         run: npm ci
 
       - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_16.4.app || true
+        run: |
+          sudo xcode-select -s /Applications/Xcode_16.4.app || true
+          echo "XCODE_VERSION=16.4" >> "$GITHUB_ENV"
 
       - name: Install CocoaPods
         run: gem install cocoapods
 
+      - name: Cache CocoaPods spec repo
+        uses: actions/cache@v4
+        with:
+          path: ~/.cocoapods/repos
+          key: cocoapods-${{ runner.os }}
+          restore-keys: |
+            cocoapods-${{ runner.os }}-
+
+      - name: Cache Pods + pod download cache
+        id: pods-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            app/ios/Pods
+            ~/Library/Caches/CocoaPods
+          key: pods-${{ runner.os }}-${{ hashFiles('app/ios/Podfile', 'app/ios/Podfile.lock') }}
+
       - name: Install CocoaPods dependencies
         working-directory: app/ios
-        run: pod install --repo-update
+        run: pod install
+
+      - name: Cache DerivedData
+        id: dd-cache
+        uses: actions/cache@v4
+        with:
+          path: app/ios/build
+          key: dd-xcode${{ env.XCODE_VERSION }}-${{ hashFiles('app/ios/Podfile', 'app/ios/Podfile.lock', 'app/package-lock.json') }}
+          restore-keys: |
+            dd-xcode${{ env.XCODE_VERSION }}-
 
       - name: Build app (no signing)
         working-directory: app/ios
