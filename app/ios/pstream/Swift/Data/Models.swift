@@ -74,12 +74,16 @@ struct TMDBItem: Decodable, Identifiable, Hashable {
 
     var posterURL: URL? {
         guard let posterPath = posterPath else { return nil }
-        return URL(string: "https://image.tmdb.org/t/p/w500\(posterPath)")
+        var components = URLComponents(string: "https://image.tmdb.org/t/p/w500/")!
+        components.path.append(posterPath)
+        return components.url
     }
 
     var backdropURL: URL? {
         guard let backdropPath = backdropPath else { return nil }
-        return URL(string: "https://image.tmdb.org/t/p/w780\(backdropPath)")
+        var components = URLComponents(string: "https://image.tmdb.org/t/p/w780/")!
+        components.path.append(backdropPath)
+        return components.url
     }
 }
 
@@ -123,7 +127,9 @@ struct TMDBEpisode: Decodable, Identifiable, Hashable {
 
     var stillURL: URL? {
         guard let stillPath = stillPath else { return nil }
-        return URL(string: "https://image.tmdb.org/t/p/w300\(stillPath)")
+        var components = URLComponents(string: "https://image.tmdb.org/t/p/w300/")!
+        components.path.append(stillPath)
+        return components.url
     }
 }
 

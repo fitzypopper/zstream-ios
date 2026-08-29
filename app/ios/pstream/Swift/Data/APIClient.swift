@@ -4,6 +4,7 @@ enum APIError: Error, LocalizedError {
     case invalidResponse
     case http(Int)
     case message(String)
+    case missingConfig(String)
 
     var errorDescription: String? {
         switch self {
@@ -13,6 +14,8 @@ enum APIError: Error, LocalizedError {
             return "Server error (HTTP \(code))."
         case .message(let text):
             return text
+        case .missingConfig(let key):
+            return "Missing configuration: \(key). Add to Info.plist."
         }
     }
 }
@@ -23,10 +26,25 @@ enum APIError: Error, LocalizedError {
 struct APIClient {
     static let shared = APIClient()
 
-    private let baseURL = URL(string: "https://backend.zstream.mov")!
+    private let baseURL: URL
     static let tmdbBaseURL = "https://api.themoviedb.org/3"
-    static let tmdbAPIKey = "1865f43a0549ca50d341dd9ab8b29f49"
+    static let tmdbAPIKey: String
     private let userAgent = "ZStream-iOS/1.4.2 (CFNetwork)"
+
+    private init() {
+        // Load from Info.plist (set via xcconfig/environment)
+        guard let tmdbKey = Bundle.main.infoDictionary?["TMDB_API_KEY"] as? String,
+              !tmdbKey.isEmpty else {
+            fatalError("TMDB_API_KEY not found in Info.plist. Add it via xcconfig or build settings.")
+        }
+        Self.tmdbAPIKey = tmdbKey
+
+        let backendURL = Bundle.main.infoDictionary?["BACKEND_URL"] as? String ?? "https://backend.zstream.mov"
+        guard let url = URL(string: backendURL) else {
+            fatalError("Invalid BACKEND_URL in Info.plist")
+        }
+        self.baseURL = url
+    }
 
     /// Generic JSON request against the ZStream backend.
     func request<T: Decodable>(

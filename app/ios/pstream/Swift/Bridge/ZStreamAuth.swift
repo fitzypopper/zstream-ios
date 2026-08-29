@@ -8,11 +8,15 @@ final class KeychainAuth {
     static let shared = KeychainAuth()
 
     private let service = "com.zstream.ios.auth"
+    private let lock = NSLock()
 
     private init() {}
 
     @discardableResult
     func save(_ value: String, forAccount account: String) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        
         guard let data = value.data(using: .utf8) else { return false }
 
         let baseQuery: [String: Any] = [
@@ -38,6 +42,9 @@ final class KeychainAuth {
     }
 
     func retrieve(forAccount account: String) -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -53,6 +60,9 @@ final class KeychainAuth {
     }
 
     func delete(forAccount account: String) {
+        lock.lock()
+        defer { lock.unlock() }
+        
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,

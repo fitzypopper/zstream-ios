@@ -45,10 +45,11 @@ struct LoginView: View {
                 }
 
                 Button {
+                    guard !isBusy else { return }
                     isBusy = true
                     Task {
                         await store.login(username: username, password: password, device: deviceName)
-                        isBusy = false
+                        await MainActor.run { isBusy = false }
                     }
                 } label: {
                     HStack {

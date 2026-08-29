@@ -160,6 +160,20 @@ struct SearchView: View {
                                 }
                             }
                         }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color(.secondarySystemBackground))
+                )
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .onDisappear {
+                    debounceTask?.cancel()
+                }
+
+                // Results
                     if !query.isEmpty {
                         Button { query = "" } label: {
                             Image(systemName: "xmark.circle.fill")
@@ -488,8 +502,8 @@ struct DetailsView: View {
     }
 
     private var playButton: some View {
-        Button {
-            // Play movie
+        NavigationLink {
+            PlayerView(item: item, season: nil, episode: nil)
         } label: {
             Label("Play", systemImage: "play.fill")
                 .font(.headline)
@@ -585,6 +599,12 @@ struct DetailsView: View {
     private func loadDetails() async {
         if item.isTV {
             await loadTVDetails()
+        } else {
+            do {
+                _ = try await APIClient.shared.details(type: "movie", id: item.id)
+            } catch {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 
