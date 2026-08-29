@@ -57,6 +57,7 @@ struct APIClient {
         request.httpMethod = method
         request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 15
 
         if authenticated, let token = KeychainAuth.shared.retrieve(forAccount: "auth_token") {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
@@ -71,7 +72,9 @@ struct APIClient {
         guard (200..<300).contains(http.statusCode) else {
             throw APIError.http(http.statusCode)
         }
-        return try JSONDecoder().decode(T.self, from: data)
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        return try decoder.decode(T.self, from: data)
     }
 
     /// POST /auth/password/login { username, password, device }
@@ -147,12 +150,15 @@ struct APIClient {
         guard let url = components.url else { throw APIError.invalidResponse }
         var request = URLRequest(url: url)
         request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
+        request.timeoutInterval = 15
 
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         guard (200..<300).contains(http.statusCode) else {
             throw APIError.http(http.statusCode)
         }
-        return try JSONDecoder().decode(T.self, from: data)
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        return try decoder.decode(T.self, from: data)
     }
 }

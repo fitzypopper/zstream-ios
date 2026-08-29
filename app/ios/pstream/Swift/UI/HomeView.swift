@@ -353,7 +353,8 @@ struct WebView: UIViewRepresentable {
         webView.backgroundColor = .black
         webView.scrollView.isScrollEnabled = false
 
-        let request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 30)
+        var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 15)
+        request.setValue("ZStream-iOS/1.4.2", forHTTPHeaderField: "User-Agent")
         webView.load(request)
 
         return webView
@@ -381,6 +382,10 @@ struct WebView: UIViewRepresentable {
         func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
             isLoading = false
         }
+
+        func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+            isLoading = false
+        }
     }
 }
 
@@ -397,6 +402,7 @@ struct DetailsView: View {
     @State private var isLoadingSeasons = false
     @State private var isLoadingEpisodes = false
     @State private var errorMessage: String?
+    @State private var detailTask: Task<Void, Never>?
 
     var body: some View {
         ZStack {
@@ -411,7 +417,10 @@ struct DetailsView: View {
         .navigationTitle(item.displayTitle)
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            await loadDetails()
+            detailTask = Task { await loadDetails() }
+        }
+        .onDisappear {
+            detailTask?.cancel()
         }
         .alert("Error", isPresented: .constant(errorMessage != nil)) {
             Button("OK") { errorMessage = nil }
@@ -601,7 +610,10 @@ struct DetailsView: View {
             await loadTVDetails()
         } else {
             do {
+                try Task.checkCancellation()
                 _ = try await APIClient.shared.details(type: "movie", id: item.id)
+            } catch is CancellationError {
+                return
             } catch {
                 errorMessage = error.localizedDescription
             }
@@ -613,6 +625,7 @@ struct DetailsView: View {
         defer { isLoadingSeasons = false }
 
         do {
+            try Task.checkCancellation()
             let details = try await APIClient.shared.showDetails(id: item.id)
             let validSeasons = details.seasons?.filter { $0.seasonNumber > 0 } ?? []
             seasons = validSeasons
@@ -620,6 +633,8 @@ struct DetailsView: View {
                 selectedSeason = first
                 await loadEpisodes(for: first)
             }
+        } catch is CancellationError {
+            return
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -630,8 +645,11 @@ struct DetailsView: View {
         defer { isLoadingEpisodes = false }
 
         do {
+            try Task.checkCancellation()
             let details = try await APIClient.shared.seasonDetails(tvId: item.id, seasonNumber: season.seasonNumber)
             episodes = details.episodes
+        } catch is CancellationError {
+            return
         } catch {
             errorMessage = error.localizedDescription
         }
