@@ -19,7 +19,6 @@ target 'ZStream' do
 
   use_react_native!(
     :path => config[:reactNativePath],
-    # An absolute path to your application root.
     :app_path => "#{Pod::Config.instance.installation_root}/.."
   )
 
@@ -28,20 +27,17 @@ target 'ZStream' do
       installer,
       config[:reactNativePath],
       :mac_catalyst_enabled => false,
-      # :ccache_enabled => true
     )
 
-    # Add WebKit framework for WKWebView
-    installer.pods_project.targets.each do |target|
-      if target.name == 'ZStream'
-        target.build_configurations.each do |config|
-          config.build_settings['OTHER_LDFLAGS'] ||= '$(inherited)'
-          config.build_settings['OTHER_LDFLAGS'] << ' -framework WebKit'
+    # Add WebKit framework to main app target for WKWebView
+    installer.aggregate_targets.each do |aggregate|
+      aggregate.user_project.targets.each do |target|
+        if target.name == 'ZStream'
+          target.build_configurations.each do |config|
+            config.build_settings['OTHER_LDFLAGS'] ||= '$(inherited)'
+            config.build_settings['OTHER_LDFLAGS'] << ' -framework WebKit'
+          end
         end
-        # Add WebKit to frameworks
-        target.frameworks_build_phase.add_file_reference(
-          installer.pods_project.frameworks_group.find_file_by_path('System/Library/Frameworks/WebKit.framework')
-        ) if installer.pods_project.frameworks_group.find_file_by_path('System/Library/Frameworks/WebKit.framework')
       end
     end
   end
