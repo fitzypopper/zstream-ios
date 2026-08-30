@@ -1,5 +1,34 @@
 # ZStream iOS - Critical Fixes Summary
 
+## CI Fix Round 4 (Commits 1c48500 → 47dac1c, 33306336161 ✅ GREEN)
+
+### 14. OTHER_LDFLAGS CLI Override Dropped -ObjC/-lc++ (CRITICAL — final link failure)
+**Problem**: Final link command was missing `-ObjC`/`-lc++`, so symbols from static ObjC libs weren't force-loaded:
+```
+Undefined symbols:
+  "_OBJC_CLASS_$_RCTAppDependencyProvider"
+  "_OBJC_CLASS_$_RCTDefaultReactNativeFactoryDelegate"
+  "_OBJC_CLASS_$_RCTReactNativeFactory"
+  "_RCTRegisterModule"
+```
+
+**Root cause**: CI passed `OTHER_LDFLAGS="$(inherited) -framework WebKit"` on the `xcodebuild` command line. A command-line setting **replaces** the project's `OTHER_LDFLAGS = ($(inherited), -ObjC, -lc++)`. The expanded value inherited the pod flags but NOT `-ObjC`/`-lc++`, so the React static libs' ObjC metadata (module registration) was stripped during link.
+
+**Fix**: Link WebKit the native way instead of via an LDFLAGS override:
+- `project.pbxproj`: added `WebKit.framework` as a `PBXFileReference` (SDKROOT) + `PBXBuildFile` entry in the Frameworks build phase.
+- Removed the `OTHER_LDFLAGS=...` flag from `ios-build.yml` entirely — the project's `-ObjC -lc++` now applies again, and CocoaPods' own link flags are preserved.
+
+**Result**: Build succeeded, `ZStream.ipa` (6.0M) built and uploaded as draft release. The `git...exit code 128` bash warning in the Create-draft-release step is benign (non-fatal; softprops tries a tag push that's not permitted in this private repo).
+
+**Lesson**: Never override `OTHER_LDFLAGS` on the xcodebuild command line for an RN app — it silently drops `-ObjC`. Add frameworks via the Xcode project's Frameworks phase instead.
+
+### 13. .foregroundColor(.tertiary) Type Error
+**Problem**: `ForegroundStyleModifier` — `.tertiary` is a `HierarchicalShapeStyle`, not a `Color`, so `foregroundColor` failed to compile (`cannot convert value of type 'HierarchicalShapeStyle'`), and the cascade produced a generic-parameter-inference error in SettingsView.
+
+**Fix**: Replaced all 3 uses of `.foregroundColor(.tertiary)` with `.foregroundColor(ZStreamTheme.tertiaryText)`.
+
+---
+
 ## CI Fix Round 3 (Commits 651e5a5 → 2657f1e, e3602ae)
 
 ### 10. pbxproj Duplicate Path Bug (CRITICAL — blocked all CI builds)
@@ -116,17 +145,19 @@ components.path = "/t/p/w500\(posterPath)"
 
 | File | Changes |
 |------|---------|
-| `project.pbxproj` | Fixed 11 Swift file refs: removed `app/ios/` prefix so `SOURCE_ROOT` resolves correctly |
+| `project.pbxproj` | Fixed 11 Swift file refs (removed `app/ios/` prefix); added `WebKit.framework` to Frameworks phase |
 | `ZStreamAuth.swift` | Added `import React` (RCTPromise types), Keychain lock, better accessibility |
-| `APIClient.swift` | Static key fix, timeouts, snake_case decoding, runtime backend URL |
-| `SettingsView.swift` | New Backend section (URL text field, saved onDisappear) |
+| `APIClient.swift` | Static key fix, timeouts, snake_case decoding, runtime backend URL + TMDB response unwrap |
+| `SettingsView.swift` | New Backend section (URL text field, saved onDisappear); tertiary color fix |
+| `HomeView.swift` | SearchView fix, PlayerView cleanup, DetailsView cancellation, tertiary color fix |
 | `Models.swift` | URLComponents for all image URLs |
 | `UISelection.swift` | NSLock, removed synchronize() |
-| `HomeView.swift` | SearchView fix, PlayerView cleanup, DetailsView cancellation |
 | `ContentView.swift` | Verified navigation structure |
 | `Info.plist` | `TMDB_API_KEY` build setting; static `BACKEND_URL` default |
-| `ios-build.yml` | Root build, TMDB_API_KEY secret only; removed BACKEND_URL |
+| `ios-build.yml` | Root build, TMDB_API_KEY secret only; removed BACKEND_URL; **removed OTHER_LDFLAGS override** |
 | `Config.xcconfig` | New reference file |
+| `scripts/preflight.sh` | Local pre-flight: validates pbxproj paths, Info.plist XML, Swift sources, `.tertiary` usage |
+| `docs/` | CI round 3/4 fix summaries |
 
 ## Required GitHub Secrets
 
