@@ -10,8 +10,9 @@ ZStream is a native SwiftUI iOS app for streaming movies and TV shows. It replac
 - **Framework**: SwiftUI + Combine
 - **Minimum iOS**: 15.1
 - **Build**: Xcode 16.4, macOS 15 CI
-- **Dependencies**: CocoaPods (React Native bridge), WebKit (WKWebView)
+- **Dependencies**: CocoaPods (React Native bridge), WebKit (WKWebView, linked via `OTHER_LDFLAGS` in CI)
 - **Authentication**: Keychain-backed, shared with RN bridge
+- **Backend URL**: Build-time default in Info.plist, overridable at runtime in Settings (UserDefaults key `backend_url`)
 
 ## Project Structure
 
@@ -47,7 +48,7 @@ app/
 - **Endpoints**: Trending, Discover (movies/TV), Search, Details, Seasons, Episodes
 - **Timeout**: 15s for all requests
 - **Decoding**: `convertFromSnakeCase` for TMDB snake_case → Swift camelCase
-- **Backend**: `backend.zstream.mov` (auth, user data)
+- **Backend**: `BACKEND_URL` — build-time default `https://backend.zstream.mov`, runtime override stored in UserDefaults (`backend_url`) via Settings → Backend (takes effect on app restart)
 
 ### ZStreamStore (`ZStreamStore.swift`)
 - `@MainActor` ObservableObject
@@ -94,8 +95,10 @@ app/
 <key>TMDB_API_KEY</key>
 <string>$(TMDB_API_KEY)</string>
 <key>BACKEND_URL</key>
-<string>$(BACKEND_URL)</string>
+<string>https://backend.zstream.mov</string>
 ```
+- `TMDB_API_KEY` is a build setting substituted from the GitHub secret.
+- `BACKEND_URL` is a static default; users can override at runtime in Settings → Backend.
 
 ### CI Workflow (`.github/workflows/ios-build.yml`)
 1. Checkout + npm deps
@@ -112,7 +115,6 @@ app/
      CODE_SIGNING_REQUIRED=NO \
      OTHER_LDFLAGS="$(inherited) -framework WebKit" \
      TMDB_API_KEY="${{ secrets.TMDB_API_KEY }}" \
-     BACKEND_URL="${{ secrets.BACKEND_URL }}" \
      build
    ```
 5. Package IPA (ad-hoc signed)
@@ -120,7 +122,8 @@ app/
 
 ### Required GitHub Secrets
 - `TMDB_API_KEY`: v3 API key (e.g., `1865f43a0549ca50d341dd9ab8b29f49`)
-- `BACKEND_URL`: `https://backend.zstream.mov`
+
+> Backend URL is NOT a CI secret — it is a baked-in default editable at runtime from Settings.
 
 ## Concurrency & Thread Safety
 

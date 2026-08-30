@@ -1,6 +1,35 @@
 # ZStream iOS - Critical Fixes Summary
 
-## Issues Fixed (Commits 96af7a9 → cf95618)
+## CI Fix Round 3 (Commits 651e5a5 → 2657f1e, e3602ae)
+
+### 10. pbxproj Duplicate Path Bug (CRITICAL — blocked all CI builds)
+**Problem**: All 11 Swift file references used `path = app/ios/pstream/Swift/...` with `sourceTree = SOURCE_ROOT`. `SOURCE_ROOT` = the `.xcodeproj`'s directory (`app/ios`), so Xcode resolved `app/ios + app/ios/pstream/...` → `Build input files cannot be found`.
+
+**Fix**: Stripped the `app/ios/` prefix — paths now `pstream/Swift/...`, resolving correctly relative to `SOURCE_ROOT`:
+```
+path = app/ios/pstream/Swift/UI/ContentView.swift   →   path = pstream/Swift/UI/ContentView.swift
+```
+(The other references like `Info.plist`/`Images.xcassets` already used `pstream/...`; only the Swift files were broken.)
+
+### 11. Missing `import React` in ZStreamAuth bridge (CRITICAL)
+**Problem**: After the path fix, compilation failed with `cannot find type 'RCTPromiseResolveBlock'/'RCTPromiseRejectBlock' in scope` — the RN-bridged Swift module didn't import React.
+
+**Fix**: Added `import React` to `ZStreamAuth.swift`. The app still bootstraps React Native (AppDelegate), so the bridge needs the RCT types.
+
+### 12. BACKEND_URL Now Runtime-Configurable
+**Problem**: BACKEND_URL was a CI build secret, baked in at build time and hidden.
+
+**User decision**: The backend URL should be user-editable in Settings, not a build secret.
+
+**Fix**:
+- `APIClient` reads `UserDefaults` key `backend_url` first, falls back to Info.plist default.
+- `SettingsView` → new **Backend** section with a text field; saved on navigate-away (`onDisappear`).
+- CI no longer passes `BACKEND_URL`; Info.plist now uses a static default `https://backend.zstream.mov`.
+- Only `TMDB_API_KEY` remains a GitHub secret.
+
+---
+
+## Earlier Fixes (Commits 96af7a9 → cf95618)
 
 ### 1. APIClient Static Property Bug (CRITICAL)
 **Problem**: `static let tmdbAPIKey` assigned in `init()` — won't compile (static let can't be set in instance init).
@@ -80,21 +109,23 @@ components.path = "/t/p/w500\(posterPath)"
 
 ### 9. CI Configuration
 - Build from repo root (fixes `SOURCE_ROOT` paths)
-- `TMDB_API_KEY`/`BACKEND_URL` from GitHub Secrets → xcodebuild
+- `TMDB_API_KEY` from GitHub Secrets → xcodebuild (BACKEND_URL is no longer a secret — runtime-configurable)
 - Created `Config.xcconfig` for reference
 
 ## Files Changed
 
 | File | Changes |
 |------|---------|
-| `APIClient.swift` | Static key fix, timeouts, snake_case decoding |
+| `project.pbxproj` | Fixed 11 Swift file refs: removed `app/ios/` prefix so `SOURCE_ROOT` resolves correctly |
+| `ZStreamAuth.swift` | Added `import React` (RCTPromise types), Keychain lock, better accessibility |
+| `APIClient.swift` | Static key fix, timeouts, snake_case decoding, runtime backend URL |
+| `SettingsView.swift` | New Backend section (URL text field, saved onDisappear) |
 | `Models.swift` | URLComponents for all image URLs |
-| `ZStreamAuth.swift` | Keychain lock, better accessibility |
 | `UISelection.swift` | NSLock, removed synchronize() |
 | `HomeView.swift` | SearchView fix, PlayerView cleanup, DetailsView cancellation |
 | `ContentView.swift` | Verified navigation structure |
-| `Info.plist` | Build setting placeholders |
-| `ios-build.yml` | Secrets → build settings, root build |
+| `Info.plist` | `TMDB_API_KEY` build setting; static `BACKEND_URL` default |
+| `ios-build.yml` | Root build, TMDB_API_KEY secret only; removed BACKEND_URL |
 | `Config.xcconfig` | New reference file |
 
 ## Required GitHub Secrets
@@ -102,7 +133,8 @@ components.path = "/t/p/w500\(posterPath)"
 | Secret | Value |
 |--------|-------|
 | `TMDB_API_KEY` | v3 API key (e.g., `1865f43a0549ca50d341dd9ab8b29f49`) |
-| `BACKEND_URL` | `https://backend.zstream.mov` |
+
+> `BACKEND_URL` is NOT a secret. Default `https://backend.zstream.mov` lives in Info.plist and is user-editable in Settings → Backend.
 
 ## Verification
 
