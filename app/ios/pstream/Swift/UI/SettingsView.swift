@@ -33,14 +33,14 @@ struct SettingsView: View {
                         TextField("Backend URL", text: $backendURL)
                             .textInputAutocapitalization(.never)
                             .textFieldStyle(.roundedBorder)
-                            .onSubmit {
-                                UserDefaults.standard.set(backendURL, forKey: "backend_url")
-                            }
                         Text("Changes take effect on app restart")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
                     .padding(.vertical, 4)
+                    .onDisappear {
+                        UserDefaults.standard.set(backendURL, forKey: "backend_url")
+                    }
                 }
 
                 Section("Playback") {
