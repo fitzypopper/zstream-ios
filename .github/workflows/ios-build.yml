@@ -91,7 +91,6 @@ jobs:
             -derivedDataPath app/ios/build \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
-            OTHER_LDFLAGS="$(inherited) -framework WebKit" \
             TMDB_API_KEY="${{ secrets.TMDB_API_KEY }}" \
             build
 
