@@ -127,7 +127,7 @@ struct APIClient {
     }
 
     private func tmdbResults(path: String, query: [(String, String)] = []) async throws -> [TMDBItem] {
-        try await tmdbDecode(path: path, query: query) as TMDBTrendingResponse
+        try await (tmdbDecode(path: path, query: query) as TMDBTrendingResponse).results
     }
 
     private func tmdbObject(path: String, query: [(String, String)] = []) async throws -> TMDBItem {
