@@ -112,6 +112,14 @@ while IFS= read -r line; do
     fi
 done < <(grep -E 'in Sources \*/ = \{isa = PBXBuildFile;' "$PBX")
 
+# --- 4. Common Swift compile pitfalls that CI will reject ---
+echo "-- Checking Swift for known compile pitfalls --"
+while IFS= read -r f; do
+    if grep -qE '\.foregroundColor\(\.(tertiary|quaternary)\)' "$f"; then
+        say_err "invalid shape-style color in $f: .foregroundColor(.tertiary/.quaternary) is not a Color; use a Color e.g. ZStreamTheme.tertiaryText"
+    fi
+done < <(find "$PROJ_DIR/pstream/Swift" -name '*.swift')
+
 # --- Summary ---
 echo ""
 if [ "$errors" -gt 0 ]; then
