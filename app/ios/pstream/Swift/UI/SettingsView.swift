@@ -103,14 +103,14 @@ struct SettingsView: View {
                         Spacer()
                         Image(systemName: "chevron.right")
                             .font(.caption)
-                            .foregroundColor(.tertiary)
+                            .foregroundColor(ZStreamTheme.tertiaryText)
                     }
                     HStack {
                         Label("Report Issue", systemImage: "exclamationmark.bubble")
                         Spacer()
                         Image(systemName: "chevron.right")
                             .font(.caption)
-                            .foregroundColor(.tertiary)
+                            .foregroundColor(ZStreamTheme.tertiaryText)
                     }
                 }
 

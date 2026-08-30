@@ -252,7 +252,7 @@ struct SearchResultRow: View {
             Spacer()
             Image(systemName: "chevron.right")
                 .font(.caption)
-                .foregroundColor(.tertiary)
+                .foregroundColor(ZStreamTheme.tertiaryText)
         }
         .padding(.vertical, 4)
     }
