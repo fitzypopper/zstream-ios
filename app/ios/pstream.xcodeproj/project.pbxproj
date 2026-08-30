@@ -25,27 +25,27 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		036141D6884BB32AC8098C47 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ContentView.swift; path = app/ios/pstream/Swift/UI/ContentView.swift; sourceTree = SOURCE_ROOT; };
-		0F494B0885F7CE2926B5C4CB /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HomeView.swift; path = app/ios/pstream/Swift/UI/HomeView.swift; sourceTree = SOURCE_ROOT; };
-		129446C4A0A2E9046C0BB2E2 /* UISelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UISelection.swift; path = app/ios/pstream/Swift/Bridge/UISelection.swift; sourceTree = SOURCE_ROOT; };
+		036141D6884BB32AC8098C47 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ContentView.swift; path = pstream/Swift/UI/ContentView.swift; sourceTree = SOURCE_ROOT; };
+		0F494B0885F7CE2926B5C4CB /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HomeView.swift; path = pstream/Swift/UI/HomeView.swift; sourceTree = SOURCE_ROOT; };
+		129446C4A0A2E9046C0BB2E2 /* UISelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UISelection.swift; path = pstream/Swift/Bridge/UISelection.swift; sourceTree = SOURCE_ROOT; };
 		13B07F961A680F5B00A75B9A /* ZStream.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ZStream.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = pstream/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = pstream/Info.plist; sourceTree = "<group>"; };
 		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = pstream/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		1DEB4567BCBD2A099A0365D2 /* ZStreamStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ZStreamStore.swift; path = app/ios/pstream/Swift/Data/ZStreamStore.swift; sourceTree = SOURCE_ROOT; };
-		277B41148311BFD8E9F2DEC1 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = APIClient.swift; path = app/ios/pstream/Swift/Data/APIClient.swift; sourceTree = SOURCE_ROOT; };
-		2D444C4F803E4C93D2F8CC00 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SettingsView.swift; path = app/ios/pstream/Swift/UI/SettingsView.swift; sourceTree = SOURCE_ROOT; };
+		1DEB4567BCBD2A099A0365D2 /* ZStreamStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ZStreamStore.swift; path = pstream/Swift/Data/ZStreamStore.swift; sourceTree = SOURCE_ROOT; };
+		277B41148311BFD8E9F2DEC1 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = APIClient.swift; path = pstream/Swift/Data/APIClient.swift; sourceTree = SOURCE_ROOT; };
+		2D444C4F803E4C93D2F8CC00 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SettingsView.swift; path = pstream/Swift/UI/SettingsView.swift; sourceTree = SOURCE_ROOT; };
 		3B4392A12AC88292D35C810B /* Pods-pstream.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-pstream.debug.xcconfig"; path = "Target Support Files/Pods-pstream/Pods-pstream.debug.xcconfig"; sourceTree = "<group>"; };
-		4557446592FB67EA09591D04 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Theme.swift; path = app/ios/pstream/Swift/UI/Theme.swift; sourceTree = SOURCE_ROOT; };
-		510B415DA15064C1EE2D5711 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Models.swift; path = app/ios/pstream/Swift/Data/Models.swift; sourceTree = SOURCE_ROOT; };
+		4557446592FB67EA09591D04 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Theme.swift; path = pstream/Swift/UI/Theme.swift; sourceTree = SOURCE_ROOT; };
+		510B415DA15064C1EE2D5711 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Models.swift; path = pstream/Swift/Data/Models.swift; sourceTree = SOURCE_ROOT; };
 		5709B34CF0A7D63546082F79 /* Pods-pstream.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-pstream.release.xcconfig"; path = "Target Support Files/Pods-pstream/Pods-pstream.release.xcconfig"; sourceTree = "<group>"; };
 		5DCACB8F33CDC322A6C60F78 /* libPods-pstream.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-pstream.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = pstream/AppDelegate.swift; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = pstream/LaunchScreen.storyboard; sourceTree = "<group>"; };
-		97C84936BBE1B0D146E27B41 /* ZStreamAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ZStreamAuth.swift; path = app/ios/pstream/Swift/Bridge/ZStreamAuth.swift; sourceTree = SOURCE_ROOT; };
-		AAC4408E8DDBA4A3FFFE09DF /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LoginView.swift; path = app/ios/pstream/Swift/UI/LoginView.swift; sourceTree = SOURCE_ROOT; };
+		97C84936BBE1B0D146E27B41 /* ZStreamAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ZStreamAuth.swift; path = pstream/Swift/Bridge/ZStreamAuth.swift; sourceTree = SOURCE_ROOT; };
+		AAC4408E8DDBA4A3FFFE09DF /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LoginView.swift; path = pstream/Swift/UI/LoginView.swift; sourceTree = SOURCE_ROOT; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
-		EDAA479DAD67AF68AEEA503A /* ZStreamAuth.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = ZStreamAuth.m; path = app/ios/pstream/Swift/Bridge/ZStreamAuth.m; sourceTree = SOURCE_ROOT; };
+		EDAA479DAD67AF68AEEA503A /* ZStreamAuth.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = ZStreamAuth.m; path = pstream/Swift/Bridge/ZStreamAuth.m; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
