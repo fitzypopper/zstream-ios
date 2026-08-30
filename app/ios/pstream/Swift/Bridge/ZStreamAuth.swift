@@ -1,5 +1,6 @@
 import Foundation
 import Security
+import React
 
 /// Shared Keychain-backed storage for the app's three auth keys.
 /// Thread-safe; called from both the React Native bridge and the SwiftUI app,
