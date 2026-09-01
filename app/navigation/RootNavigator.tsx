@@ -6,7 +6,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { NavigationContainer } from '@react-navigation/native';
-import { Platform } from 'react-native';
+import { Platform, ActivityIndicator, Text, View, StyleSheet } from 'react-native';
 
 import LoginScreen from '../screens/LoginScreen';
 import HomeScreen from '../screens/HomeScreen';
@@ -138,6 +138,7 @@ const TabIcon: React.FC<{ name: string; color: string; size: number }> = ({
  */
 const RootNavigator = () => {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+  const [bootTimedOut, setBootTimedOut] = useState(false);
 
   const checkAuth = useCallback(async () => {
     const authenticated = await isAuthenticated();
@@ -156,8 +157,26 @@ const RootNavigator = () => {
     return () => removeListener();
   }, []);
 
+  // If the auth check hangs on a physical device (e.g. native storage bridge
+  // dead), isLoggedIn stays null forever -> previously a permanent black
+  // screen. Surface it so sideloaded builds can be diagnosed without a Mac.
+  useEffect(() => {
+    const timer = setTimeout(() => setBootTimedOut(true), 6000);
+    return () => clearTimeout(timer);
+  }, [isLoggedIn]);
+
   if (isLoggedIn === null) {
-    return null; // Loading state
+    return (
+      <View style={styles.bootContainer}>
+        {!bootTimedOut && <ActivityIndicator color={colors.PRIMARY} />}
+        {bootTimedOut && (
+          <Text style={styles.bootStuck}>
+            Startup stuck: auth check did not resolve after 6s (native storage
+            bridge may not be responding).
+          </Text>
+        )}
+      </View>
+    );
   }
 
   return (
@@ -246,3 +265,18 @@ const RootNavigator = () => {
 };
 
 export default RootNavigator;
+
+const styles = StyleSheet.create({
+  bootContainer: {
+    flex: 1,
+    backgroundColor: colors.BACKGROUND,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+  },
+  bootStuck: {
+    color: colors.WARNING,
+    fontSize: 14,
+    textAlign: 'center',
+  },
+});
