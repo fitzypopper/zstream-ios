@@ -55,15 +55,32 @@ const isAuthKey = (key: string): boolean =>
   key === STORAGE_KEYS.USER_ID ||
   key === STORAGE_KEYS.USER_PROFILE;
 
+/**
+ * If the native bridge promise never settles (not just rejects), `await`ing it
+ * blocks auth/bootstrap forever and the app sits on a black/loading screen.
+ * Resolve with `null` (→ fall back to JS storage) after a short timeout.
+ */
+function nativeOrTimeout<T>(promise: PromiseLike<T>, ms: number): Promise<T | null> {
+  return new Promise<T | null>((resolve) => {
+    let settled = false;
+    const settle = (value: T | null) => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    };
+    Promise.resolve(promise).then(
+      (value) => settle(value),
+      () => settle(null), // native rejected → caller falls back to JS storage
+    );
+    setTimeout(() => settle(null), ms);
+  });
+}
+
 /** Read a storage key, preferring the native Keychain for auth keys. */
 async function readKey(key: string): Promise<string | null> {
   if (isAuthKey(key) && hasNativeAuth()) {
-    try {
-      const value = await nativeGetItem(key);
-      if (value !== null) return value;
-    } catch {
-      /* fall back to the regular storage */
-    }
+    const fromNative = await nativeOrTimeout(nativeGetItem(key), 1000);
+    if (fromNative !== null) return fromNative;
   }
   try {
     return await getItem(key);
@@ -75,11 +92,8 @@ async function readKey(key: string): Promise<string | null> {
 /** Write a storage key to both the native Keychain (when applicable) and the regular storage. */
 async function writeKey(key: string, value: string): Promise<void> {
   if (isAuthKey(key) && hasNativeAuth()) {
-    try {
-      await nativeSetItem(key, value);
-    } catch {
-      /* ignore native write errors; the mirror below still persists */
-    }
+    // Fire-and-forget: never block login on the Keychain bridge.
+    Promise.resolve(nativeSetItem(key, value)).catch(() => {});
   }
   try {
     await setItem(key, value);
@@ -90,11 +104,7 @@ async function writeKey(key: string, value: string): Promise<void> {
 
 async function removeKey(key: string): Promise<void> {
   if (isAuthKey(key) && hasNativeAuth()) {
-    try {
-      await nativeRemoveItem(key);
-    } catch {
-      /* best effort */
-    }
+    Promise.resolve(nativeRemoveItem(key)).catch(() => {});
   }
   try {
     await removeItem(key);
