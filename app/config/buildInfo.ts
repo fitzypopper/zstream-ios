@@ -6,4 +6,4 @@
  * lets us tell a stale IPA apart from a real runtime hang on a device that
  * has no console.
  */
-export const BUILD_TAG = 'b29';
+export const BUILD_TAG = 'b30';

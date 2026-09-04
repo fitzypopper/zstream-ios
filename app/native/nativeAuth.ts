@@ -18,8 +18,17 @@ interface ZStreamAuthModule {
   setUISelection(value: string): Promise<boolean>;
 }
 
+// The legacy `ZStreamAuth` Keychain bridge (RCT_EXTERN_MODULE) never settles on
+// the New-Architecture interop layer: calling it from JS wedges the JS thread
+// so no timeout can fire. RN auth must not depend on it at all — auth state
+// lives in the JS storage layer (MMKV/AsyncStorage). Re-enable only when the
+// bridge is converted to a proper (non-blocking) TurboModule.
+const ENABLE_NATIVE_AUTH_BRIDGE = false;
+
 const nativeModule: ZStreamAuthModule | null =
-  Platform.OS === 'ios' ? (NativeModules.ZStreamAuth as ZStreamAuthModule | undefined) ?? null : null;
+  ENABLE_NATIVE_AUTH_BRIDGE && Platform.OS === 'ios'
+    ? (NativeModules.ZStreamAuth as ZStreamAuthModule | undefined) ?? null
+    : null;
 
 type BridgeState = 'unprobed' | 'alive' | 'dead';
 let bridgeState: BridgeState = nativeModule ? 'unprobed' : 'dead';
