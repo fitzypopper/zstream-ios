@@ -178,17 +178,143 @@ export async function fetchDetails(id: string): Promise<MediaItem> {
   }
 }
 
+const IMDB_GRAPHQL_URL = 'https://api.graphql.imdb.com/';
+
+/**
+ * Mirrors IMDB_TITLE_QUERY from the decompiled Android app (ImdbApiKt.kt):
+ * the real playable sources come from IMDb's GraphQL API, not the ZStream
+ * backend (which has no /sources endpoint). We fetch external_ids from TMDB
+ * to map title -> IMDb id, then pull the trailer + primary video playback URLs.
+ */
+const IMDB_TITLE_QUERY = `
+query TitleBundle($id: ID!, $similarFirst: Int!, $videosFirst: Int!) {
+  title(id: $id) {
+    id
+    latestTrailer {
+      id
+      name { value }
+      thumbnail { url }
+      playbackURLs { url mimeType displayName { value } }
+    }
+    primaryVideos(first: $videosFirst) {
+      edges {
+        node {
+          id
+          name { value }
+          thumbnail { url }
+          playbackURLs { url mimeType displayName { value } }
+        }
+      }
+    }
+  }
+}
+`;
+
+interface ImdbPlaybackUrl {
+  url?: string;
+  mimeType?: string;
+  displayName?: { value?: string } | null;
+}
+
+interface ImdbVideoNode {
+  id?: string;
+  name?: { value?: string };
+  thumbnail?: { url?: string };
+  playbackURLs?: ImdbPlaybackUrl[] | null;
+}
+
+/** Pick the mp4 playback URL, else the last one (mirrors the Android jt3.a). */
+function pickPlaybackUrl(
+  urls: ImdbPlaybackUrl[] | null | undefined,
+): ImdbPlaybackUrl | null {
+  if (!urls || urls.length === 0) return null;
+  for (const url of urls) {
+    if (String(url.mimeType ?? '').toLowerCase().includes('mp4')) return url;
+  }
+  return urls[urls.length - 1];
+}
+
+function mapImdbSource(
+  playback: ImdbPlaybackUrl,
+  _label: string,
+): Source {
+  const url = playback.url ?? '';
+  const mimeType = String(playback.mimeType ?? '').toLowerCase();
+  let type: Source['type'] = 'unknown';
+  if (url.includes('.m3u8') || mimeType.includes('mpegurl') || mimeType.includes('hls')) {
+    type = 'hls';
+  } else if (mimeType.includes('mp4') || url.includes('.mp4')) {
+    type = 'mp4';
+  } else if (mimeType.includes('dash') || url.includes('.mpd')) {
+    type = 'dash';
+  }
+  return { url, provider: 'imdb', quality: 'auto', type };
+}
+
 /**
  * Fetch streaming sources for a media item.
- * Uses ZStream backend for debrid-backed sources.
+ * Real playable sources come from the IMDb GraphQL API (trailer + primary
+ * videos), matching the decompiled Android app's jt3 repository.
  */
 export async function fetchSources(
-  _tmdbId: string,
-  _mediaType: 'movie' | 'tv' = 'movie',
+  tmdbId: string,
+  mediaType: 'movie' | 'tv' = 'movie',
 ): Promise<SourcesResponse> {
-  // ZStream backend doesn't expose a direct /sources endpoint in the decompiled code;
-  // real sources are provided by the debrid service & TV sync layer.
-  return { sources: [], subtitles: [] };
+  let imdbId: string | undefined;
+  try {
+    const external = await get<{ imdb_id?: string | null }>(
+      `https://api.themoviedb.org/3/${mediaType}/${tmdbId}/external_ids`,
+      { api_key: TMDB_API_KEY },
+    );
+    imdbId = external.imdb_id ?? undefined;
+  } catch (error) {
+    if (__DEV__) console.error('[ZStream] external_ids error:', error);
+  }
+
+  if (!imdbId) return { sources: [], subtitles: [] };
+
+  try {
+    const response = await fetch(IMDB_GRAPHQL_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query: IMDB_TITLE_QUERY,
+        variables: {
+          id: imdbId,
+          similarFirst: 1,
+          videosFirst: 15,
+        },
+      }),
+    });
+    if (!response.ok) return { sources: [], subtitles: [] };
+
+    const json = (await response.json()) as {
+      data?: { title?: { latestTrailer?: ImdbVideoNode; primaryVideos?: { edges?: { node?: ImdbVideoNode }[] } } };
+    };
+    const title = json?.data?.title;
+    if (!title) return { sources: [], subtitles: [] };
+
+    const sources: Source[] = [];
+    const latestTrailer = title.latestTrailer;
+    const trailerPlayback = pickPlaybackUrl(latestTrailer?.playbackURLs);
+    if (trailerPlayback?.url) {
+      sources.push(mapImdbSource(trailerPlayback, latestTrailer?.name?.value ?? 'Trailer'));
+    }
+
+    const trailerId = latestTrailer?.id;
+    for (const edge of title.primaryVideos?.edges ?? []) {
+      const node = edge?.node;
+      if (!node?.id || (trailerId && node.id === trailerId)) continue;
+      const playback = pickPlaybackUrl(node.playbackURLs);
+      if (!playback?.url) continue;
+      sources.push(mapImdbSource(playback, node.name?.value ?? 'Video'));
+    }
+
+    return { sources, subtitles: [] };
+  } catch (error) {
+    if (__DEV__) console.error('[ZStream] fetchSources error:', error);
+    return { sources: [], subtitles: [] };
+  }
 }
 
 /**
