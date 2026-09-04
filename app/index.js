@@ -42,6 +42,7 @@ try {
 
 import React from 'react';
 import { SafeAreaView, Text, View, ScrollView } from 'react-native';
+import { probeNativeAuth } from './native/nativeAuth';
 
 function CrashScreen({ error }) {
   return React.createElement(
@@ -103,6 +104,12 @@ try {
 } catch (err) {
   capture(err);
 }
+
+// Fire the one-shot native bridge health check now so any honest hang is
+// detected once (300ms) and the bridge is disabled for the rest of the boot.
+try {
+  probeNativeAuth();
+} catch {}
 
 function RootComponent() {
   if (bootError) {

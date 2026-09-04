@@ -79,7 +79,7 @@ function nativeOrTimeout<T>(promise: PromiseLike<T>, ms: number): Promise<T | nu
 /** Read a storage key, preferring the native Keychain for auth keys. */
 async function readKey(key: string): Promise<string | null> {
   if (isAuthKey(key) && hasNativeAuth()) {
-    const fromNative = await nativeOrTimeout(nativeGetItem(key), 1000);
+    const fromNative = await nativeOrTimeout(nativeGetItem(key), 300);
     if (fromNative !== null) return fromNative;
   }
   try {
