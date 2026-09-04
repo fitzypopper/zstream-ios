@@ -18,6 +18,7 @@ import { ThemedView } from '../components/ThemedView';
 import { ThemedText } from '../components/ThemedText';
 import { loginWithPassword, registerWithPassword } from '../api/auth';
 import { setAuthToken, setUserProfile, setUserId, notifyAuthChanged } from '../config/env';
+import { BUILD_TAG } from '../config/buildInfo';
 
 interface LoginScreenProps {
   onLoginSuccess?: () => void;
@@ -227,6 +228,9 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
             </ThemedText>
           )}
           </View>
+          <ThemedText variant="small" color="muted" style={styles.footerText}>
+            build {BUILD_TAG}
+          </ThemedText>
         </ScrollView>
       </KeyboardAvoidingView>
     </ThemedView>

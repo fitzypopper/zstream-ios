@@ -23,6 +23,7 @@ import PlayerScreen from '../screens/PlayerScreen';
 import { RootStackParamList, TabParamList } from './types';
 import { colors } from '../theme/colors';
 import { isAuthenticated, addAuthListener } from '../config/env';
+import { BUILD_TAG } from '../config/buildInfo';
 
 const Tab = createBottomTabNavigator<TabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -172,9 +173,10 @@ const RootNavigator = () => {
         {bootTimedOut && (
           <Text style={styles.bootStuck}>
             Startup stuck: auth check did not resolve after 6s (native storage
-            bridge may not be responding).
+            bridge may not be responding). [build {BUILD_TAG}]
           </Text>
         )}
+        <Text style={styles.bootTag}>build {BUILD_TAG}</Text>
       </View>
     );
   }
@@ -277,6 +279,12 @@ const styles = StyleSheet.create({
   bootStuck: {
     color: colors.WARNING,
     fontSize: 14,
+    textAlign: 'center',
+  },
+  bootTag: {
+    color: colors.MUTED,
+    fontSize: 11,
+    marginTop: 12,
     textAlign: 'center',
   },
 });
